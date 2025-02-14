@@ -2,7 +2,7 @@
 
 ## Summary
 
-**Ext-Analyzer** is an open-source project aimed at enhancing the security evaluation of browser extensions. Building on the foundation of crx-analyzer, our goal is to develop a web-based platform that improves the existing static analysis, provides detailed risk scoring, and offers customizable report generation. This tool is designed to help security professionals assess and secure browser extensions more effectively.
+**Ext-Analyzer** is an open-source project aimed at enhancing the security evaluation of browser extensions. Building on the foundation of [crx-analyzer](https://github.com/rileydakota/crx-analyzer), our goal is to develop a web-based platform that improves the existing static analysis, provides detailed risk scoring, and offers customizable report generation. This tool is designed to help security professionals assess and secure browser extensions more effectively.
 
 ## Prerequisites
 
