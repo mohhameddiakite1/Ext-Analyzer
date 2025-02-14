@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ext-Analyzer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="center-container">
+      <h1>Ext-Analyzer</h1>
+      <!-- Search Field Section -->
+      <div class="search-container">
+        <form action="{{ url_for('analyze_url') }}" method="POST">
+          <input
+            type="text"
+            name="ext_url"
+            class="search-field"
+            placeholder="Enter the URL of the Chrome Extension..."
+            required
+          />
+          <button class="search-button" type="submit">Analyze</button>
+        </form>
+        <!-- Results Section -->
+      </div>
+      <div class="result-container">
+        <h1>Analysis Data</h1>
+    {% if analysis_data %}
+    <p>Name: {{ analysis_data['name'] }}</p>
+    <p>Hash (SHA256): {{ analysis_data['sha256'] }}</p>
+    <p>Risk score: {{ analysis_data['risk_score'] }}</p>
+    <table>
+        <tr>
+            <th>Permission</th>
+            <th>Risk level</th>
+            </tr>
+        {% for perm in analysis_data['permissions'] %}
+        <tr>
+            <td>{{ perm['permission'] }}</td>
+            <td>{{ perm['risk_level'] }}</td>
+        </tr>
+        {% endfor %}
+        </tr>
+    </table>
+    {% else %}
+    <p>No analysis data available.</p>
+    {% endif %}
+        
+    </div>
+  </body>
+</html>

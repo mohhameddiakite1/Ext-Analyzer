@@ -1,0 +1,158 @@
+import os
+import json
+import zipfile
+import shutil
+import hashlib
+import re
+
+from enum import Enum
+from requests import HTTPError
+from . import download
+from .models import ChromeManifest
+
+
+class InvalidExtensionIDError(Exception):
+    pass
+
+
+class Browser(Enum):
+    CHROME = "chrome"
+    EDGE = "edge"
+
+
+class Extension:
+    def __init__(self, extension_id: str, browser: Browser, working_dir: str = "tmp"):
+        self.extension_id = extension_id
+        self.working_dir = working_dir
+        self.browser = browser
+        self.extension_zip_path = os.path.join(
+            working_dir, f"{self.extension_id}.crx")
+        self.extension_dir_path = os.path.join(
+            working_dir, f"{self.extension_id}")
+        self.sha256 = None  # Will be set after download
+
+        if not os.path.exists(working_dir):
+            os.makedirs(working_dir)
+
+        match self.browser:
+            case Browser.CHROME:
+                self.download_url = download.get_chrome_extension_url(
+                    self.extension_id)
+            case Browser.EDGE:
+                self.download_url = download.get_edge_extension_url(
+                    self.extension_id)
+            case _:
+                raise ValueError(f"Invalid browser: {self.browser}")
+        try:
+            self.__download_extension()
+        except HTTPError as e:
+            match e.response.status_code:
+                case 404:
+                    raise InvalidExtensionIDError(
+                        f"403: Extension ID {self.extension_id} not found. Requested URL: {e.request.url}"
+                    )
+
+                case _:
+                    raise e
+
+        self.sha256 = hashlib.sha256(
+            open(self.extension_zip_path, "rb").read()
+        ).hexdigest()
+        self.__unzip_extension()
+
+        self.manifest = self.__get_manifest()
+
+    def __unzip_extension(self) -> None:
+        with zipfile.ZipFile(self.extension_zip_path, "r") as zip_ref:
+            zip_ref.extractall(self.extension_dir_path)
+
+    def __download_extension(self) -> None:
+        download.download_extension(self.download_url, self.extension_zip_path)
+
+    def __get_manifest(self) -> ChromeManifest:
+        manifest_path = os.path.join(self.extension_dir_path, "manifest.json")
+        with open(manifest_path, "r") as manifest_file:
+            manifest_data = json.load(manifest_file)
+
+        return ChromeManifest(**manifest_data)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.remove(self.extension_zip_path)
+        shutil.rmtree(self.extension_dir_path)
+
+    @property
+    def name(self) -> str:
+        return self.manifest.name
+
+    @property
+    def version(self) -> str:
+        return self.manifest.version
+
+    @property
+    def manifest_version(self) -> int:
+        return self.manifest.manifest_version
+
+    @property
+    def author(self) -> str:
+        return self.manifest.author
+
+    @property
+    def homepage_url(self) -> str:
+        return self.manifest.homepage_url
+
+    @property
+    def permissions(self) -> list[str]:
+        match self.manifest_version:
+            case 2:
+                permissions = self.manifest.permissions or []
+                optional = self.manifest.optional_permissions or []
+                return permissions + optional
+            case 3:
+                permissions = self.manifest.permissions or []
+                optional = self.manifest.optional_permissions or []
+                host = self.manifest.host_permissions or []
+                optional_host = self.manifest.optional_host_permissions or []
+                return permissions + optional + host + optional_host
+
+    @property
+    def javascript_files(self) -> list[str]:
+        js_files = []
+        for root, _, files in os.walk(self.extension_dir_path):
+            for file in files:
+                if file.endswith(".js"):
+                    js_files.append(os.path.join(root, file))
+        return js_files
+
+    @property
+    def urls(self) -> list[str]:
+        urls = set()
+        patterns = [
+            r'file://[^\s<>"\']+',
+            r'https?://[^\s<>"\']+',
+            r'http?://[^\s<>"\']+',
+        ]
+
+        for js_file in self.javascript_files:
+            with open(js_file, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+                for pattern in patterns:
+                    found_urls = re.findall(pattern, content)
+                    urls.update(found_urls)
+
+        return list(urls)
+
+    # @property
+    # def fetch_calls(self) -> list[str]:
+    #     fetch_calls = set()
+    #     fetch_pattern = r'fetch\s*\(\s*[\'"]([^\'"]+)[\'"]'
+
+    #     for js_file in self.javascript_files:
+    #         with open(js_file, "r", encoding="utf-8", errors="ignore") as f:
+    #             content = f.read()
+    #             found_fetch_calls = re.findall(fetch_pattern, content)
+    #             fetch_calls.update(found_fetch_calls)
+
+    #     return list(fetch_calls)

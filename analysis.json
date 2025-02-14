@@ -1,0 +1,30 @@
+{
+    "name": "__MSG_AppName__",
+    "sha256": "4e5c3fb86ca0cab060d05029d038160837b72f021d0a266bdc9b7fbeaf5b3b6f",
+    "metadata": {},
+    "risk_score": 0,
+    "permissions": [],
+    "javascript_files": [
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/update.js",
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/js/jquery-3.2.1.min.js",
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/js/Box2D.min.js",
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/js/main.js",
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/js/ext.js",
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/js/howler.min.js",
+        "tmp/iibghlclocgeljpbimnneepjceaiepkj/js/createjs.min.js"
+    ],
+    "urls": [
+        "https://www.w3technic.com/chrome-extension/pinball-space-adventure-game/#uninstall",
+        "http://createjs.com/",
+        "http://w3technic.com/game",
+        "https://mths.be/platform",
+        "http://www.opensource.org/licenses/mit-license.html",
+        "https://bnjmnt4n.now.sh/",
+        "http://www.gphysics.com",
+        "https://mths.be/mit",
+        "http://www.w3technic.com/contact",
+        "https://www.w3technic.com/chrome-extension/pinball-space-adventure-game/#welcome",
+        "http://www.w3technic.com/game"
+    ],
+    "fetch_calls": []
+}
