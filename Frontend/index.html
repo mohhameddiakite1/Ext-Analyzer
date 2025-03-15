@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Extension Analyzer</h1>
+    </header>
+    <main>
+        <section class="input-panel">
+            <h2>Submit Extension URL</h2>
+            <form id="url-form">
+                <input type="url" id="url-input" placeholder="e.g., https://chrome.google.com/webstore/detail/..." required>
+                <button type="submit">Analyze</button>
+            </form>
+            <div id="loading" class="hidden">Analyzing...</div>
+        </section>
+        <section class="results-panel" id="results">
+            <h2>Analysis Results</h2>
+            <div id="results-content" class="hidden">
+                <div class="result-section">
+                    <h3>Risk Score</h3>
+                    <p id="risk-score" style="font-size: 24px;"></p>
+                    <input type="text" id="risk-description" class="editable" placeholder="Add description">
+                </div>
+                <div class="result-section">
+                    <h3>Permission Breakdown</h3>
+                    <ul id="permissions-list"></ul>
+                </div>
+                <div class="result-section">
+                    <h3>AI Explanation</h3>
+                    <p contenteditable="true" id="explanation" class="editable"></p>
+                </div>
+                <div class="result-section">
+                    <h3>Recommendations</h3>
+                    <p contenteditable="true" id="recommendations" class="editable"></p>
+                </div>
+                <button id="generate-report">Generate Report</button>
+            </div>
+        </section>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
