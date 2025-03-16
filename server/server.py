@@ -3,9 +3,14 @@ import sys
 import json
 from crx_analyzer.cli import analyze
 import re
-
+import server.llm as llm
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+def get_explanations(_permissions_list):
+    
+    llm_model = llm.setup_model()
+    results = llm.handle_explanations(llm_model,_permissions_list, len(_permissions_list))
+    return results
 
 def extract_id(url):
     """
@@ -87,7 +92,11 @@ def analyze_url():
             analysis_results = json.loads(analysis_results)
         except json.JSONDecodeError:
             analysis_results = {}
-    print(analysis_results)
+    # print(analysis_results)
+    # print("-"*10)
+    permissions_list=analysis_results["permissions"]
+    permissions_to_explain = [p["permission"] for p in permissions_list]
+    explanations = get_explanations(permissions_to_explain)
     return render_template('index.html', analysis_data=analysis_results)
 
 
