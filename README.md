@@ -8,6 +8,7 @@
 
 - [Python 3.10.7](https://www.python.org/downloads/release/python-3107/)
 - [Google Chrome](https://www.google.com/chrome/)
+- [Ollama 0.6.1](https://github.com/ollama/ollama/releases/tag/v0.6.1)
 
 ## Setup Guide
 
@@ -61,7 +62,21 @@ Verify installation by running:
 python --version
 ```
 
-### 3. Set Up the Virtual Environment
+### 3. Download Ollama 0.6.1
+
+1. Visit the [Ollama releases page](https://github.com/ollama/ollama/releases/tag/v0.6.1).
+2. Download the appropriate installer for your operating system.
+   - For macOS, download the macOS installer.
+   - For Windows, download the Windows executable.
+   - For Linux, follow the provided instructions in the release notes.
+3. Follow the installation instructions provided on the release page.
+4. Verify the installation by running:
+    ```bash
+    ollama --version
+    ```
+   You should see output indicating version 0.6.1.
+
+### 4. Set Up the Virtual Environment
 
 1. In your project directory, create a virtual environment:
     ```bash
@@ -78,7 +93,7 @@ python --version
         source venv/bin/activate
         ```
 
-### 4. Install Dependencies
+### 5. Install Dependencies
 
 With the virtual environment activated, install the required packages:
 
@@ -86,7 +101,7 @@ With the virtual environment activated, install the required packages:
 pip install -r requirements.txt
 ```
 
-### 5. Start the Program
+### 6. Start the Program
 
 1. Ensure your virtual environment is activated and you are in the project’s root directory.
 2. Run the program:

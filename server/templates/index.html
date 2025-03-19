@@ -32,18 +32,27 @@
     <p>Name: {{ analysis_data['name'] }}</p>
     <p>Hash (SHA256): {{ analysis_data['sha256'] }}</p>
     <p>Risk score: {{ analysis_data['risk_score'] }}</p>
+   <!-- If permissions are found for the extension -->
+    {% if not analysis_data['message'] %}
     <table>
         <tr>
             <th>Permission</th>
             <th>Risk level</th>
+            <th>AI Analysis</th>
             </tr>
         {% for perm in analysis_data['permissions'] %}
         <tr>
             <td>{{ perm['permission'] }}</td>
             <td>{{ perm['risk_level'] }}</td>
+            <td>{{ analysis_data['explanations'][loop.index0] }}</td>
         </tr>
         {% endfor %}
+        <!-- If permissions are not found -->
+        {% else %}
+        <tr>
+            <td colspan="3">{{ analysis_data['message'] }}</td>
         </tr>
+    {%endif%}
     </table>
     {% else %}
     <p>No analysis data available.</p>

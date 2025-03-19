@@ -1,16 +1,27 @@
 from flask import Flask, render_template, request
-import sys
 import json
 from crx_analyzer.cli import analyze
 import re
 import server.llm as llm
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+
 def get_explanations(_permissions_list):
-    
+    """
+    Retrieves explanations for a list of permissions using a language model.
+
+    Args:
+        _permissions_list (list): A list of permissions to get explanations for.
+
+    Returns:
+        list: A list containing the explanations for the provided permissions.
+    """
+
     llm_model = llm.setup_model()
-    results = llm.handle_explanations(llm_model,_permissions_list, len(_permissions_list))
+    results = llm.handle_explanations(
+        llm_model, _permissions_list, len(_permissions_list))
     return results
+
 
 def extract_id(url):
     """
@@ -70,9 +81,6 @@ def analyze_url():
     """
     Process the Chrome extension URL submitted via POST, perform analysis, and render results.
 
-    Extracts the extension ID from the URL, retrieves the analysis data, writes a JSON report
-    if possible, and returns the rendered index page with analysis results.
-
     Returns:
         str: Rendered HTML for the index page with analysis data.
     """
@@ -94,9 +102,12 @@ def analyze_url():
             analysis_results = {}
     # print(analysis_results)
     # print("-"*10)
-    permissions_list=analysis_results["permissions"]
-    permissions_to_explain = [p["permission"] for p in permissions_list]
-    explanations = get_explanations(permissions_to_explain)
+    permissions_list = analysis_results.get("permissions", [])
+    if permissions_list:
+        explanations = get_explanations(permissions_list)
+        analysis_results["explanations"] = explanations
+    else:
+        analysis_results["message"] = "No permissions found in the extension."
     return render_template('index.html', analysis_data=analysis_results)
 
 
