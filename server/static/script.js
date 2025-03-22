@@ -2,13 +2,13 @@ document.addEventListener("DOMContentLoaded", () => {
   //to colorize risk score on page load
   colorizeRiskScore();
 
-  const tabButtons = document.querySelectorAll(".tab-btn");
+  const tab = document.querySelectorAll(".tab-btn");
   const tabContents = document.querySelectorAll(".tab-content");
 
-  tabButtons.forEach((button) => {
+  tab.forEach((button) => {
     button.addEventListener("click", () => {
       //Remove active class from all buttons and contents
-      tabButtons.forEach((btn) => btn.classList.remove("active"));
+      tab.forEach((btn) => btn.classList.remove("active"));
       tabContents.forEach((content) => content.classList.remove("active"));
 
       //Add active class to current button
@@ -21,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // Colorize the risk score
       colorizeRiskScore();
 
-      // Update report when switching to report tab
       if (button.getAttribute("data-tab") === "report") {
         buildReportSection();
       }
@@ -47,121 +46,253 @@ document.addEventListener("DOMContentLoaded", () => {
   buildReportSection();
 });
 
-// Generate and download PDF report
 function generatePdfReport() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const date = new Date().toLocaleDateString();
+  const pageWidth = doc.internal.pageSize.width;
+  let yPosition = 20;
+  const lineHeight = 7;
+  const margin = 20;
+
+  // Helper function for text wrapping
+  function addText(text, y, fontSize = 11) {
+    doc.setFontSize(fontSize);
+    const lines = doc.splitTextToSize(text, pageWidth - 2 * margin);
+    doc.text(lines, margin, y);
+    return y + lines.length * lineHeight;
+  }
+
+  // Helper function for section headers
+  function addHeader(text, y) {
+    doc.setFontSize(14);
+    doc.setFont(undefined, "bold");
+    doc.text(text, margin, y);
+    doc.setFont(undefined, "normal");
+    doc.setFontSize(11);
+    return y + 10;
+  }
+
+  // Check if we need a new page
+  function checkPage(y, needed = 20) {
+    if (y + needed > doc.internal.pageSize.height - 20) {
+      doc.addPage();
+      return 20;
+    }
+    return y;
+  }
 
   // Title
-  doc.setFontSize(18);
-  doc.text("Extension Analysis Report", 10, 20);
-  doc.setFontSize(12);
-  doc.text(`Generated on ${date}`, 10, 30);
+  doc.setFontSize(16);
+  doc.setFont(undefined, "bold");
+  yPosition = addText("Extension Analysis Report", yPosition, 16);
+  doc.setFont(undefined, "normal");
+  yPosition += 5;
+  yPosition = addText(`Generated on ${date}`, yPosition);
+  yPosition += 10;
 
-  // Extension info
-  doc.setFontSize(14);
-  doc.text("Extension Information", 10, 45);
-  doc.setFontSize(12);
-  doc.text(
-    `Name: ${
-      document.getElementById("extension-name-value")?.textContent || "N/A"
-    }`,
-    10,
-    55
-  );
-  doc.text(
-    `Risk Score: ${
-      document.getElementById("risk-score")?.textContent || "N/A"
-    }`,
-    10,
-    65
-  );
+  // Summary Section
+  yPosition = addHeader("Summary", yPosition);
 
-  // Summary
-  doc.setFontSize(14);
-  doc.text("Summary", 10, 80);
-  doc.setFontSize(12);
-  doc.text(
-    document.getElementById("report-summary")?.textContent ||
-      "No summary available",
-    10,
-    90,
-    {
-      maxWidth: 180,
+  // Basic box for summary
+  doc.setDrawColor(150, 150, 150);
+  doc.rect(margin, yPosition, pageWidth - 2 * margin, 50);
+  yPosition += 5;
+
+  const extName =
+    document.querySelector("#extension-name-value")?.textContent.trim() ||
+    "N/A";
+  const riskScore =
+    document.querySelector("#risk-score")?.textContent.trim() || "N/A";
+  const hashCode =
+    document.querySelector("#hash-code")?.textContent.trim() || "N/A";
+  const jsFilesNum =
+    document.querySelector("#js-files-num")?.textContent.trim() || "N/A";
+  const refUrlsNum =
+    document.querySelector("#ref-urls-num")?.textContent.trim() || "N/A";
+  const permsNum =
+    document.querySelector("#perms-num")?.textContent.trim() || "N/A";
+
+  yPosition = addText(`Extension Name: ${extName}`, yPosition);
+  yPosition = addText(`Risk Score: ${riskScore}`, yPosition);
+  yPosition = addText(`${hashCode}`, yPosition);
+  yPosition = addText(`${jsFilesNum}`, yPosition);
+  yPosition = addText(`${refUrlsNum}`, yPosition);
+  yPosition = addText(`${permsNum}`, yPosition);
+  yPosition += 15;
+
+  // Permissions Section
+
+  //Build permission entries
+  const permissionEntries = [];
+  let permissionReportEntry = ``;
+  let permissionsText = "";
+  yPosition = checkPage(yPosition, 30);
+  yPosition = addHeader("Permission Analysis", yPosition);
+  const permissions = document.querySelectorAll(".permission-item");
+  permissions.forEach((permission) => {
+    const permissionName = permission
+      .querySelector(".permission-name")
+      .childNodes[0].textContent.trim();
+    const permissionText = permission
+      .querySelector(".permission-text")
+      .textContent.trim();
+    const riskSelect = permission.querySelector(".risk-select");
+    const riskLevel = riskSelect ? riskSelect.value.toUpperCase() : "";
+
+    permissionReportEntry = `- ${permissionName} [${riskLevel}]\n${permissionText}`;
+    permissionEntries.push(permissionReportEntry);
+  });
+  // Add entries to the pdf report
+  permissionEntries.forEach((entry) => {
+    if (entry.trim()) {
+      yPosition = checkPage(yPosition, 40);
+
+      // Draw a simple box around each permission
+      const lines = doc.splitTextToSize(
+        entry.trim(),
+        pageWidth - 2 * margin - 10
+      );
+      const boxHeight = lines.length * lineHeight + 6;
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(margin, yPosition - 3, pageWidth - 2 * margin, boxHeight);
+
+      // Add permission text
+      yPosition = addText(entry.trim(), yPosition);
+      yPosition += 10;
     }
-  );
+  });
 
-  // Permissions
-  doc.setFontSize(14);
-  doc.text("Permission Analysis", 10, 110);
-  doc.setFontSize(12);
-  doc.text(
-    document.getElementById("report-permissions")?.textContent ||
-      "No permissions available",
-    10,
-    120,
-    {
-      maxWidth: 180,
+  // Recommendations Section
+  yPosition = checkPage(yPosition, 30);
+  yPosition = addHeader("Security Recommendations", yPosition);
+  const recommendationsEntries = [];
+  const recommendations = document.querySelectorAll(".recommendation-item");
+
+  if (recommendations.length > 0) {
+    recommendations.forEach((recommendation, index) => {
+      const text = recommendation
+        .querySelector(".recommendation-description")
+        .textContent.trim();
+      // Split long text into smaller chunks with proper line breaks
+      const lines = doc.splitTextToSize(text, pageWidth - 2 * margin - 10);
+      recommendationReportEntry = `${index + 1}. ${lines.join("")}`;
+      recommendationsEntries.push(recommendationReportEntry);
+    });
+  } else {
+    recommendationReportEntry = "No specific recommendations.";
+    recommendationsEntries.push(recommendationReportEntry);
+  }
+
+  recommendationsEntries.forEach((rec) => {
+    if (rec.trim()) {
+      yPosition = checkPage(yPosition, 20);
+      yPosition = addText(rec.trim(), yPosition);
+      yPosition += 5; // Reduced spacing between recommendations
     }
-  );
+  });
 
-  // Recommendations
-  doc.setFontSize(14);
-  doc.text("Security Recommendations", 10, 140);
-  doc.setFontSize(12);
-  doc.text(
-    document.getElementById("report-recommendations")?.textContent ||
-      "No recommendations available",
-    10,
-    150,
-    { maxWidth: 180 }
-  );
+  // Add page numbers
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+    doc.text(
+      `Page ${i} of ${totalPages}`,
+      pageWidth / 2,
+      doc.internal.pageSize.height - 10,
+      { align: "center" }
+    );
+  }
 
   // Save the PDF
-  doc.save(`extension-analysis-${date}.pdf`);
+  doc.save(`extension-analysis-${date.replace(/\//g, "-")}.pdf`);
 }
 
 // Generate and download JSON report
 function generateJsonReport() {
+  const date = new Date().toLocaleDateString();
+
+  // Get extension basic info
+  const extName =
+    document.querySelector("#extension-name-value")?.textContent.trim() ||
+    "N/A";
+  const riskScore =
+    document.querySelector("#risk-score")?.textContent.trim() || "N/A";
+  const hashCode =
+    document.querySelector("#hash-code")?.textContent.trim() || "N/A";
+  const jsFilesNum =
+    document.querySelector("#js-files-num")?.textContent.trim() || "N/A";
+  const refUrlsNum =
+    document.querySelector("#ref-urls-num")?.textContent.trim() || "N/A";
+  const permsNum =
+    document.querySelector("#perms-num")?.textContent.trim() || "N/A";
+
+  // Build permissions entries
+  const permissionEntries = [];
+  document.querySelectorAll(".permission-item").forEach((permission) => {
+    const permissionName = permission
+      .querySelector(".permission-name")
+      .childNodes[0].textContent.trim();
+    const permissionText = permission
+      .querySelector(".permission-text")
+      .textContent.trim();
+    const riskSelect = permission.querySelector(".risk-select");
+    const riskLevel = riskSelect ? riskSelect.value.toUpperCase() : "";
+
+    permissionEntries.push({
+      permission: permissionName,
+      risk_level: riskLevel,
+      description: permissionText,
+    });
+  });
+
+  // Build recommendations entries
+  const recommendationsEntries = [];
+  document
+    .querySelectorAll(".recommendation-item")
+    .forEach((recommendation) => {
+      const text = recommendation
+        .querySelector(".recommendation-description")
+        .textContent.trim();
+      recommendationsEntries.push(text);
+    });
+
+  // Make JSON structure
   const reportData = {
-    extensionName:
-      document.getElementById("extension-name-value")?.textContent || "N/A",
-    riskScore: document.getElementById("risk-score")?.textContent || "N/A",
-    summary:
-      document.getElementById("report-summary")?.textContent ||
-      "No summary available",
-    permissionAnalysis:
-      document.getElementById("report-permissions")?.textContent ||
-      "No permissions available",
-    recommendations:
-      document.getElementById("report-recommendations")?.textContent ||
-      "No recommendations available",
-    generatedOn: new Date().toISOString(),
+    generated_on: date,
+    extension_info: {
+      name: extName,
+      risk_score: riskScore,
+      hash: hashCode,
+      javascript_files: jsFilesNum,
+      referenced_urls: refUrlsNum,
+      permissions_count: permsNum,
+    },
+    permissions: permissionEntries,
+    recommendations: recommendationsEntries.length
+      ? recommendationsEntries
+      : ["No specific recommendations."],
   };
 
-  const jsonBlob = new Blob([JSON.stringify(reportData, null, 2)], {
-    type: "application/json",
-  });
-  const jsonUrl = URL.createObjectURL(jsonBlob);
-  const jsonLink = document.createElement("a");
-  jsonLink.href = jsonUrl;
-  jsonLink.download = `extension-analysis-${new Date()
-    .toLocaleDateString()
-    .replace(/\//g, "-")}.json`;
-  jsonLink.click();
+  // Fortmat and make JSON file downloadable
+  const jsonString = JSON.stringify(reportData, null, 2);
+  const json_blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(json_blob); // Temp url to allow download
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `extension-analysis-${date.replace(/\//g, "-")}.json`;
+  link.click();
+  URL.revokeObjectURL(url); // clean up
 }
 
-// Add this new function
 function editPermissionsSection() {
-  // Set initial select values
   document.querySelectorAll(".risk-select").forEach((select) => {
     const originalRiskScore = select.getAttribute("data-original");
     select.value = originalRiskScore;
 
     select.addEventListener("change", function () {
       const permissionItem = this.closest(".permission-item");
-      // Remove all risk classes
       permissionItem.classList.remove(
         "none-risk",
         "low-risk",
@@ -169,9 +300,7 @@ function editPermissionsSection() {
         "high-risk",
         "critical-risk"
       );
-      // Add new risk class
       permissionItem.classList.add(`${this.value}-risk`);
-      // Update select styling
       this.setAttribute("data-original", this.value);
     });
   });
@@ -226,7 +355,6 @@ function editPermissionsSection() {
   const editControls = document.querySelector(".edit-controls");
 
   editAllBtn?.addEventListener("click", function () {
-    // Show save/cancel buttons
     this.classList.add("hidden");
     editControls.classList.remove("hidden");
 
@@ -274,18 +402,17 @@ function editPermissionsSection() {
   document
     .querySelector(".cancel-all-btn")
     ?.addEventListener("click", function () {
-      // Hide save/cancel buttons
       editControls.classList.add("hidden");
       editAllBtn.classList.remove("hidden");
 
-      // Reset all selects to original values and disable
+      // Reset all selects to original values and disable selects
       document.querySelectorAll(".risk-select").forEach((select) => {
         const originalRiskScore = select.getAttribute("data-original");
         select.value = originalRiskScore;
         select.disabled = true;
       });
 
-      // Reset all textareas and hide
+      // Reset all textareas and add hidden
       document.querySelectorAll(".permission-description").forEach((desc) => {
         const PermissionText = desc.querySelector(".permission-text");
         const textArea = desc.querySelector(".edit-textarea");
@@ -393,16 +520,20 @@ function manageRecommendations() {
 }
 
 function buildReportSection() {
-  // Clear existing report content first
-  const reportSummary = document.getElementById("report-summary");
-  const reportPermissions = document.getElementById("report-permissions");
-  const reportRecommendations = document.getElementById(
+  const summarySectionInReport = document.getElementById("report-summary");
+  const permissionsSectionInReport =
+    document.getElementById("report-permissions");
+  const recommendationsSectionInReport = document.getElementById(
     "report-recommendations"
   );
+  const permissions = document.querySelectorAll(".permission-item");
+  let permissionsText = "";
+  const recommendations = document.querySelectorAll(".recommendation-item");
+  let recommendationsText = "";
 
-  reportSummary.innerHTML = "";
-  reportPermissions.innerHTML = "";
-  reportRecommendations.innerHTML = "";
+  summarySectionInReport.innerHTML = "";
+  permissionsSectionInReport.innerHTML = "";
+  recommendationsSectionInReport.innerHTML = "";
 
   // Add summary to the report
   const summaryDiv = document.querySelector(".summary-text");
@@ -411,7 +542,7 @@ function buildReportSection() {
     .join("<br><br>");
   const riskScore = document.getElementById("risk-score").innerHTML;
 
-  reportSummary.innerHTML = `
+  summarySectionInReport.innerHTML = `
     <div class="scrollable-content">
       Risk Score: ${riskScore}<br><br>
       ${summaryText}
@@ -419,9 +550,6 @@ function buildReportSection() {
   `;
 
   // Add permissions to the report
-  const permissions = document.querySelectorAll(".permission-item");
-  let permissionsText = `The extension requires ${permissions.length} permissions:<br><br>`;
-
   permissions.forEach((permission) => {
     const permissionName = permission
       .querySelector(".permission-name")
@@ -435,12 +563,9 @@ function buildReportSection() {
     permissionsText += `- ${permissionName} [${riskLevel}]<br>${permissionText}<br><br>`;
   });
 
-  reportPermissions.innerHTML = `<div class="scrollable-content">${permissionsText}</div>`;
+  permissionsSectionInReport.innerHTML = `<div class="scrollable-content">${permissionsText}</div>`;
 
   // Add recommendations to the report
-  const recommendations = document.querySelectorAll(".recommendation-item");
-  let recommendationsText = "";
-
   if (recommendations.length > 0) {
     recommendations.forEach((recommendation, index) => {
       const text = recommendation
@@ -452,5 +577,5 @@ function buildReportSection() {
     recommendationsText = "No specific recommendations.";
   }
 
-  reportRecommendations.innerHTML = `<div class="scrollable-content">${recommendationsText}</div>`;
+  recommendationsSectionInReport.innerHTML = `<div class="scrollable-content">${recommendationsText}</div>`;
 }

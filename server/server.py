@@ -6,6 +6,25 @@ import server.llm as llm
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 
+def check_extension_name(ext_name, ext_url):
+    """
+    Check and fix extension name if missing by extracting it from the extension URL.
+
+    Args:
+        ext_name (str): The extension name.
+        ext_url (str): The extension URL.
+
+    Returns:
+        str: The fixed extension name.
+    """
+    if "MSG" in ext_name:
+        pattern = r"https?://chromewebstore\.google\.com/detail/([^/]+)/"
+        match = re.search(pattern, ext_url)
+        if match:
+            ext_name = match.group(1)
+    return ext_name.upper()
+
+
 def get_explanations(_permissions_list):
     """
     Retrieves explanations for a list of permissions using a language model.
@@ -45,7 +64,7 @@ def extract_id(url):
 
 def get_analysis_results(ext_id):
     """
-    Analyze the Chrome extension using its extension ID.
+    Analyze the Chrome extension with crx-analyzer using its extension ID.
 
     Args:
         ext_id (str): The 32-character extension ID.
@@ -101,8 +120,11 @@ def analyze_url():
     if isinstance(analysis_results, str):
         try:
             analysis_results = json.loads(analysis_results)
+            analysis_results["name"] = check_extension_name(
+                analysis_results["name"], extension_url)
         except json.JSONDecodeError:
-            analysis_results = {}
+            print("[-] Error while analyzing this extension")
+            return render_template('index.html', analysis_data={})
 
     permissions_list = analysis_results.get("permissions", [])
     if permissions_list:

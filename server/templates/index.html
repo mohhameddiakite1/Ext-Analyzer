@@ -62,28 +62,26 @@
                 <p
                   id="risk-score"
                   score-data="{{ analysis_data['risk_score'] }}"
-                >
+                contenteditable="true">
                   {{ analysis_data['risk_score'] }}/100
                 </p>
               </div>
               <div class="summary-text">
-                <p><b> (SHA256): {{ analysis_data['sha256'] }}</b></p>
-                <p>
+                <p id="hash-code"><b> (SHA256): {{ analysis_data['sha256'] }}</b></p>
+                <p id="js-files-num">
                   <b>
                     Javascript Files: {{ analysis_data['javascript_files']|length
                     }} js files found
                   </b>
                 </p>
-                <p>
+                <p id="ref-urls-num">
                   <b>
-                    Referenced URLs: {{ analysis_data['urls']|length }} urls
-                    found</b
+                    Referenced URLs: {{ analysis_data['urls']|length }} urls found</b
                   >
                 </p>
-                <p>
+                <p id="perms-num">
                   <b>
-                    Permissions: {{ analysis_data['permissions']|length }}
-                    permissions found</b
+                    Permissions: {{ analysis_data['permissions']|length }} permissions found</b
                   >
                 </p>
               </div>
@@ -166,7 +164,7 @@
                 </div>
                 <div class="report-section">
                   <h4>Permission Analysis</h4>
-                  <p id="report-permissions" contenteditable="true">
+                  <p id="report-permissions" >
                     {% if not analysis_data['message'] %} The extension requires
                     {{ analysis_data['permissions']|length }} permissions. {%
                     else %} {{ analysis_data['message'] }} {% endif %}
@@ -174,7 +172,7 @@
                 </div>
                 <div class="report-section">
                   <h4>Security Recommendations</h4>
-                  <p id="report-recommendations" contenteditable="true">
+                  <p id="report-recommendations" >
                     {% if analysis_data.get('recommendations') %} {{
                     analysis_data['recommendations']|join('\n\n') }} {% else %}
                     No specific recommendations. {% endif %}
