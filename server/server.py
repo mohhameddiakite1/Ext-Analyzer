@@ -94,14 +94,16 @@ def analyze_url():
                 json.dump(json_data, f)
         except json.JSONDecodeError:
             return render_template('index.html', analysis_data={})
+    else:
+        print("[-] Invalid URL")
+        return render_template('index.html', analysis_data={})
 
     if isinstance(analysis_results, str):
         try:
             analysis_results = json.loads(analysis_results)
         except json.JSONDecodeError:
             analysis_results = {}
-    # print(analysis_results)
-    # print("-"*10)
+
     permissions_list = analysis_results.get("permissions", [])
     if permissions_list:
         explanations = get_explanations(permissions_list)

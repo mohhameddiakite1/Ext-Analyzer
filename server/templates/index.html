@@ -3,61 +3,194 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ext-Analyzer</title>
+    <title>Ext-Analyzer Dashboard</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
-    <div class="center-container">
+    <header>
       <h1>Ext-Analyzer</h1>
-      <!-- Search Field Section -->
-      <div class="search-container">
-        <form action="{{ url_for('analyze_url') }}" method="POST">
-          <input
-            type="text"
-            name="ext_url"
-            class="search-field"
-            placeholder="Enter the URL of the Chrome Extension..."
-            required
-          />
-          <button class="search-button" type="submit">Analyze</button>
+    </header>
+    <main>
+      <section class="input-panel">
+        <form action="{{ url_for('analyze_url') }}" method="POST" id="url-form">
+          <div class="search-container">
+            <input
+              type="url"
+              id="url-input"
+              name="ext_url"
+              placeholder="Enter extension URL..."
+              required
+            />
+            <button type="submit" class="analyze-btn">Analyze</button>
+          </div>
         </form>
-        <!-- Results Section -->
-      </div>
-      <div class="result-container">
-        <h1>Analysis Data</h1>
-    {% if analysis_data %}
-    <p>Name: {{ analysis_data['name'] }}</p>
-    <p>Hash (SHA256): {{ analysis_data['sha256'] }}</p>
-    <p>Risk score: {{ analysis_data['risk_score'] }}</p>
-   <!-- If permissions are found for the extension -->
-    {% if not analysis_data['message'] %}
-    <table>
-        <tr>
-            <th>Permission</th>
-            <th>Risk level</th>
-            <th>AI Analysis</th>
-            </tr>
-        {% for perm in analysis_data['permissions'] %}
-        <tr>
-            <td>{{ perm['permission'] }}</td>
-            <td>{{ perm['risk_level'] }}</td>
-            <td>{{ analysis_data['explanations'][loop.index0] }}</td>
-        </tr>
-        {% endfor %}
-        <!-- If permissions are not found -->
-        {% else %}
-        <tr>
-            <td colspan="3">{{ analysis_data['message'] }}</td>
-        </tr>
-    {%endif%}
-    </table>
-    {% else %}
-    <p>No analysis data available.</p>
-    {% endif %}
-        
-    </div>
+        <div id="loading" class="hidden">Analyzing...</div>
+        {% if analysis_data %}
+        <div class="extension-info" id="extension-info">
+          <div class="info-row">
+            <div class="extension-name">
+              <h3>Extension Name</h3>
+              <p id="extension-name-value">{{ analysis_data['name'] }}</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="results-panel" id="results">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="analysis">Summary</button>
+          <button class="tab-btn" data-tab="permissions">Permissions</button>
+          <button class="tab-btn" data-tab="recommendations">
+            Recommendations
+          </button>
+          <button class="tab-btn" data-tab="report">Report</button>
+        </div>
+
+        {% if analysis_data %}
+        <div id="results-content">
+          <!-- Summary Tab -->
+          <div class="tab-content active" id="analysis-tab">
+            <div class="result-section">
+              <h3>Extension Analysis</h3>
+              <div class="risk-score">
+                <h3>Risk Score</h3>
+                <p
+                  id="risk-score"
+                  score-data="{{ analysis_data['risk_score'] }}"
+                >
+                  {{ analysis_data['risk_score'] }}/100
+                </p>
+              </div>
+              <div class="summary-text">
+                <p><b> (SHA256): {{ analysis_data['sha256'] }}</b></p>
+                <p>
+                  <b>
+                    Javascript Files: {{ analysis_data['javascript_files']|length
+                    }} js files found
+                  </b>
+                </p>
+                <p>
+                  <b>
+                    Referenced URLs: {{ analysis_data['urls']|length }} urls
+                    found</b
+                  >
+                </p>
+                <p>
+                  <b>
+                    Permissions: {{ analysis_data['permissions']|length }}
+                    permissions found</b
+                  >
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Permissions Tab -->
+          <div class="tab-content" id="permissions-tab">
+            <div class="result-section">
+              <h3>AI Permission Analysis</h3>
+              <div class="global-controls">
+                <button class="edit-all-btn">Edit All</button>
+                <div class="edit-controls hidden">
+                  <button class="save-all-btn">Save All</button>
+                  <button class="cancel-all-btn">Cancel All</button>
+                </div>
+              </div>
+              <div id="permissions-list" class="permissions-container">
+                {% if not analysis_data['message'] %} {% for perm in
+                analysis_data['permissions'] %}
+                <div
+                  class="permission-item {{ perm['risk_level']|lower }}-risk"
+                >
+                  <div class="permission-name">
+                    {{ perm['permission'] }}
+                    <select
+                      class="risk-select"
+                      data-original="{{ perm['risk_level']|lower }}"
+                      disabled
+                    >
+                      <option value="none">NONE</option>
+                      <option value="low">LOW</option>
+                      <option value="medium">MEDIUM</option>
+                      <option value="high">HIGH</option>
+                      <option value="critical">CRITICAL</option>
+                    </select>
+                  </div>
+                  <div class="permission-description">
+                    <p class="permission-text">
+                      {{ analysis_data['explanations'][loop.index0] }}
+                    </p>
+                    <textarea class="edit-textarea hidden">
+{{ analysis_data['explanations'][loop.index0] }}</textarea
+                    >
+                  </div>
+                </div>
+                {% endfor %} {% else %}
+                <p>{{ analysis_data['message'] }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations Tab -->
+          <div class="tab-content" id="recommendations-tab">
+            <div class="result-section">
+              <h3>Security Recommendations</h3>
+              <button id="add-recommendation" class="add-btn">
+                + Add Recommendation
+              </button>
+              <div id="recommendations" class="recommendations-container">
+                
+                <p class="no-recommendations">No recommendations available.</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Report Tab -->
+          <div class="tab-content" id="report-tab">
+            <div class="result-section">
+              <h3>Summary Report</h3>
+              <div class="report-container">
+                <div class="report-section">
+                  <h4>Summary</h4>
+                  <p id="report-summary">
+                    {{ analysis_data.get('summary', 'No summary available.') }}
+                  </p>
+                </div>
+                <div class="report-section">
+                  <h4>Permission Analysis</h4>
+                  <p id="report-permissions" contenteditable="true">
+                    {% if not analysis_data['message'] %} The extension requires
+                    {{ analysis_data['permissions']|length }} permissions. {%
+                    else %} {{ analysis_data['message'] }} {% endif %}
+                  </p>
+                </div>
+                <div class="report-section">
+                  <h4>Security Recommendations</h4>
+                  <p id="report-recommendations" contenteditable="true">
+                    {% if analysis_data.get('recommendations') %} {{
+                    analysis_data['recommendations']|join('\n\n') }} {% else %}
+                    No specific recommendations. {% endif %}
+                  </p>
+                </div>
+              </div>
+              <div class="export-buttons">
+                <button id="export-pdf">Export PDF</button>
+                <button id="export-json">Export JSON</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
   </body>
 </html>
