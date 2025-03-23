@@ -1,0 +1,38 @@
+{
+    "manifest_version": 3,
+    "name": "Malicious Extension",
+    "version": "1.0",
+    "description": "This extension does suspicious things.",
+    "permissions": [
+      "tabs",
+      "storage",
+      "proxy",
+      "clipboardRead",
+      "cookies",
+      "webRequest",
+      "debugger"
+    ],
+    "host_permissions": [
+      "<all_urls>",
+      "file:///*"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://*/*", "http://*/*"],
+        "js": ["https://shady.cdn.com/tracker.js", "content.js"]
+      }
+    ],
+    "externally_connectable": {
+      "matches": ["*://*.evil-site.com/*"]
+    },
+    "web_accessible_resources": [
+      {
+        "resources": ["injected_script.js"],
+        "matches": ["*://*/"]
+      }
+    ]
+  }
+  

@@ -266,9 +266,10 @@ class RiskLevel(str, Enum):
     CRITICAL = "critical"
 
 
-class PermissionRiskMapping(BaseModel):
+class RiskMapping(BaseModel):
     permission: Union[ChromePermission, str]
     risk_level: RiskLevel
+    warning: str
 
 
 class RiskReport(BaseModel):
@@ -276,7 +277,7 @@ class RiskReport(BaseModel):
     sha256: str
     metadata: dict[str, Any]
     risk_score: int
-    permissions: List[PermissionRiskMapping]
+    permissions: List[RiskMapping]
     javascript_files: List[str]
     urls: List[str]
     fetch_calls: List[str]

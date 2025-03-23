@@ -75,20 +75,31 @@ def analyze_url():
     analysis_results = get_analysis_results(extract_id(extension_url))
 
     if analysis_results != "Invalid URL":
-        try:
-            json_data = json.loads(analysis_results)
-            with open('report.json', 'w') as f:
-                json.dump(json_data, f)
-        except json.JSONDecodeError:
-            return render_template('index.html', analysis_data={})
+    #     try:
+    #         json_data = json.loads(analysis_results)
+    #         with open('report.json', 'w') as f:
+    #             json.dump(json_data, f, indent=4)
+    #     except json.JSONDecodeError:
+    #         return render_template('index.html', analysis_data={})
 
-    if isinstance(analysis_results, str):
+    # if isinstance(analysis_results, str):
+    #     try:
+    #         analysis_results = json.loads(analysis_results)
+    #     except json.JSONDecodeError:
+    #         analysis_results = {}
+    # print(analysis_results)
+    # return render_template('index.html', analysis_data=analysis_results)
+
         try:
-            analysis_results = json.loads(analysis_results)
+            # Try parsing JSON once
+            analysis_results = json.loads(analysis_results) if isinstance(analysis_results, str) else analysis_results
+            with open('report.json', 'w') as f:
+                json.dump(analysis_results, f, indent=4)  # Pretty-print JSON
         except json.JSONDecodeError:
-            analysis_results = {}
-    print(analysis_results)
-    return render_template('index.html', analysis_data=analysis_results)
+            analysis_results = {}  # Default to empty dict if parsing fails
+
+        print(analysis_results)
+        return render_template('index.html', analysis_data=analysis_results)
 
 
 if __name__ == '__main__':

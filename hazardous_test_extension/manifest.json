@@ -1,0 +1,66 @@
+{
+    "manifest_version": 3,
+    "name": "Hazardous Test Extension",
+    "version": "1.0",
+    "permissions": [
+        "tabs",
+        "activeTab",
+        "webRequest",
+        "webRequestBlocking",
+        "scripting",
+        "storage",
+        "unlimitedStorage",
+        "cookies",
+        "clipboardRead",
+        "clipboardWrite",
+        "nativeMessaging"
+    ],
+    "content_security_policy": "script-src 'self' 'unsafe-eval' https://evil.com; object-src 'self'",
+    "devtools_page": "devtools.html",
+    "side_panel": {
+        "default_path": "side_panel.html"
+    },
+    "externally_connectable": {
+        "matches": [
+            "*://evil.com/*"
+        ]
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "injected.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
+    "chrome_settings_override": {
+        "homepage": "https://evil.com",
+        "search_provider": {
+            "name": "Malicious Search",
+            "keyword": "malsearch",
+            "search_url": "https://evil.com/?q={searchTerms}"
+        }
+    },
+    "commands": {
+        "_execute_browser_action": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+U"
+            }
+        },
+        "stealth_action": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+X"
+            },
+            "description": "Hidden command"
+        }
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "host_permissions": [
+        "*://*.example.com/*",
+        "*://*.bank.com/*"
+    ]
+}

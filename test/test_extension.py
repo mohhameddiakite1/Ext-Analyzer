@@ -7,14 +7,14 @@ def mock_download_extension(url: str, output_path: str) -> None:
     test_crx_path = os.path.join(
         "test",
         "test_extension_zip",
-        "test_edge_nhngdamnlpbgglmcfdmjeoiaigepibdpa.crx",
+        "test_edge_nnkgneoiohoecpdiaponcejilbhhikei.crx",
     )
     shutil.copyfile(test_crx_path, output_path)
 
 
 def test_extension_download(monkeypatch):
     monkeypatch.setattr(
-        "download.download_extension", mock_download_extension
+        "crx_analyzer.download.download_extension", mock_download_extension
     )
 
     extension_id = "fake"

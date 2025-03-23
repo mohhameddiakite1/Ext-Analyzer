@@ -1,1 +1,56 @@
-{"name": "Web Mirror", "sha256": "08ff8c00747f70ed8225a7fe04f99ec85a860edd57416be1245f2a7ff151578f", "metadata": {}, "risk_score": 100, "permissions": [{"permission": "storage", "risk_level": "medium"}, {"permission": "alarms", "risk_level": "none"}, {"permission": "tabs", "risk_level": "high"}, {"permission": "webRequest", "risk_level": "critical"}, {"permission": "webNavigation", "risk_level": "medium"}, {"permission": "scripting", "risk_level": "none"}, {"permission": "downloads", "risk_level": "medium"}, {"permission": "<all_urls>", "risk_level": "critical"}], "javascript_files": ["tmp/eaijffijbobmnonfhilihbejadplhddo/js/popup.js", "tmp/eaijffijbobmnonfhilihbejadplhddo/js/script.js", "tmp/eaijffijbobmnonfhilihbejadplhddo/js/main.js", "tmp/eaijffijbobmnonfhilihbejadplhddo/js/lib/safe-browsing.js"], "urls": ["https://*/*", "http://*/*", "https://cs.sclpfybn.com/api/rest/v2", "https://webmirror.online/", "https://redux.js.org/Errors?code=", "file://${e}`,", "https://webmirror.online", "https://www.geogebra.org/resource/y4vngpea/MSARnGH6ug8rVVfD/material-y4vngpea.png", "https://id.sclpfybn.com"], "fetch_calls": []}
+{
+    "name": "Boxel Rebound",
+    "sha256": "ebc63317553605ad7902220d96f4a77da363875c4ac308a566b5e5b9e5036641",
+    "metadata": {},
+    "risk_score": 10,
+    "permissions": [
+        {
+            "permission": "storage",
+            "risk_level": "medium"
+        }
+    ],
+    "javascript_files": [
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/FileSaver.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Interface.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/jquery-3.3.1.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Clock.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Timer.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/tweenjs-NEXT.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Tiles.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Game.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/StorageManager.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/preloadjs-NEXT.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/LevelMap.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/draggable.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Theme.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Home.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/easeljs-NEXT.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/DialogWindow.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/soundjs-NEXT.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/LunchBox.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/buy.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/LevelEditor.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/AssetManager.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Player.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Button.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Gravity.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Particles.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/rewards.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/lz-string.min.js",
+        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Extension.js"
+    ],
+    "urls": [
+        "https://www.dopplercreative.com/boxel-rebound-portal/index.php",
+        "https://www.youtube.com/@dopplercreative/videos",
+        "https://microsoftedge.microsoft.com/addons/detail/boxel-rebound/icjmhhdmoccaalnjnalamfnfddbeaoke",
+        "http://www.opensource.org/licenses/mit-license.html",
+        "https://chrome.google.com/webstore/detail/tiny-tycoon/bamdkjfjhhnjcgcjmmjdnncpglihepoi",
+        "http://createjs.com/",
+        "https://stackoverflow.com/a/21903119/2510368",
+        "http://stackoverflow.com/a/3642850/2510368",
+        "https://addons.mozilla.org/en-US/firefox/addon/boxel-rebound-game/",
+        "http://code.google.com/p/swfobject/)",
+        "https://chromewebstore.google.com/detail/boxel-rebound/iginnfkhmmfhlkagcmpgofnjhanpmklb/reviews"
+    ],
+    "fetch_calls": []
+}
