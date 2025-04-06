@@ -11,12 +11,15 @@ from crx_analyzer.risk import (
     evaluate_web_accessible_resources,
     evaluate_chrome_settings_override,
     evaluate_commands,
+    analyze_js_risks,
+    generate_risk_mapping,
 )
 from crx_analyzer.models import (
     ChromeManifest,
     ExternallyConnectable,
     ChromePermission,
     RiskLevel,
+    RiskMapping,
 )
 
 test_cases = [
@@ -49,6 +52,9 @@ test_cases = [
                     "js": ["https://shady.cdn.com/tracker.js", "content.js"]
                 }
             ],
+            "chrome_url_overrides": {
+                
+            },
             "externally_connectable": {
                 "matches": ["*://*.evil-site.com/*"]
             },
@@ -109,7 +115,7 @@ def test_manifest(monkeypatch, manifest_file, expected):
     
     assert e.manifest == manifest
     
-    evaluate_manifest_field("web_accessible_resources", e)
+    print(evaluate_manifest_field("chrome_url_overrides", e))
     # print(type(e.manifest.content_scripts))
     # print(e.manifest.content_scripts)
     
@@ -230,7 +236,7 @@ def patch_urlhaus(monkeypatch):
 @pytest.mark.parametrize("override, expected_risk", [
     ({"homepage": "https://trusted.com/home"}, RiskLevel.NONE),
     ({"homepage": "https://evil.com/home"}, RiskLevel.HIGH),
-    ({"search_provider": {"search_url": "https://trusted.com/search"}}, RiskLevel.LOW),
+    ({"search_provider": {"search_url": "https://trusted.com/search"}}, RiskLevel.NONE),
     ({"search_provider": {"search_url": "https://evil.com/search"}}, RiskLevel.CRITICAL),
     ({"startup_pages": ["https://evil.com/start"]}, RiskLevel.MEDIUM),
     (
@@ -261,3 +267,30 @@ def test_evaluate_chrome_settings_override(override, expected_risk):
 def test_evaluate_commands(commands_input, expected):
     risk = evaluate_commands(commands_input)
     assert risk == expected    
+    
+    
+def test_dynamic_script_execution():
+    sources = {"js_files": ["eval('malicious code')"]}
+    risks = analyze_js_risks(sources)
+    assert risks == RiskLevel.CRITICAL
+    
+    sources = {"inline_scripts": ["document.write('<img src=steal>')"]}
+    risks = analyze_js_risks(sources)
+    assert risks == RiskLevel.CRITICAL
+
+    sources = {"js_files": ["fetch('https://evil.com')"]}
+    risks = analyze_js_risks(sources)
+    assert risks == RiskLevel.HIGH
+    
+    sources = {"js_files": ["console.log('Hello')"]}
+    risks = analyze_js_risks(sources)
+    assert risks == RiskLevel.NONE
+
+    sources = {"js_files": ["eval('x')\ndocument.write('bad')\nfetch('http://a')"]}
+    risks = analyze_js_risks(sources)
+    assert risks == RiskLevel.CRITICAL
+ 
+ 
+"""Test risk report generation for a known hazardous extension."""
+    # Path to the unpacked extension
+    extension_dir = Path(__file__).parent.parent / "hazardous_extension" 

@@ -149,15 +149,17 @@ class Extension:
             "inline_scripts": [],
             "dynamic_scripts": []
         }
-
         # Define dynamic patterns
         dynamic_patterns = [
-            r"eval\s*\(",  # eval
-            r"document\.write\s*\(",  # document.write
-            r"new Function\s*\(",  # new Function
-            r"setTimeout\s*\(.*?\)",  # setTimeout
-            r"setInterval\s*\(.*?\)",  # setInterval
-            r"chrome\.scripting\.executeScript\s*\(",  # chrome scripting execution
+            r"eval\s*\(",                                       # Detect eval()
+            r"document\.write\s*\(",                            # Detect document.write()
+            r"new Function\s*\(",                               # Detect new Function()
+            r"setTimeout\s*\(.*?\)",                            # Detect setTimeout() usage
+            r"setInterval\s*\(.*?\)",                           # Detect setInterval() usage
+            r"chrome\.scripting\.executeScript\s*\(",           # Detect chrome.scripting.executeScript()
+            r"fetch\s*\(",                                      # Detect regular fetch usage
+            r"fetch\s*\(\s*['\"](https?://[^\s'\"<>]+)['\"]",   # Detect fetch() with external URL literal
+            r"XMLHttpRequest"                                   # Detect XMLHttpRequest usage
         ]
         combined_dynamic_pattern = re.compile("|".join(dynamic_patterns), re.IGNORECASE)
 
@@ -186,7 +188,7 @@ class Extension:
                                 script_sources["dynamic_scripts"].append(inline_script)
 
         return script_sources
-
+    
     @property
     def urls(self) -> list[str]:
         urls = set()

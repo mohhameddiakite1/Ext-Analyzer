@@ -8,7 +8,8 @@ from .models import (
 )
 from .extension import Extension
 from typing import Any, Dict, Union
-# import requests
+import requests
+import packaging.version
 import re
 from urllib.parse import urlparse
 
@@ -46,7 +47,6 @@ risk_vector_map = {
         ChromePermission.PLATFORM_KEYS,
         ChromePermission.PRINTER_PROVIDER,
         ChromePermission.WEB_REQUEST_BLOCKING,
-        "commands",  # Only if hidden commands exist
         "devtools_page",  # Presence flagged as LOW risk
     ],
     RiskLevel.MEDIUM: [
@@ -63,8 +63,8 @@ risk_vector_map = {
         ChromePermission.TOP_SITES,
         ChromePermission.TTS_ENGINE,
         ChromePermission.WEB_NAVIGATION,
-        "chrome_settings_override",  # Can hijack homepage/search
         "background",  # Just flags persistent execution, JS analysis checks real risk
+        "chrome_url_overrides",
     ],
     RiskLevel.HIGH: [
         ChromePermission.CLIPBOARD_READ,
@@ -84,9 +84,6 @@ risk_vector_map = {
         "https://*/*",
         "http://*/*",
         "file:///*",
-        "web_accessible_resources",  # Allows injection into other websites
-        "externally_connectable",   # Can communicate with external sites
-        "content_security_policy",  # If weak CSP settings exist
     ],
     RiskLevel.CRITICAL: [
         ChromePermission.COOKIES,
@@ -118,6 +115,90 @@ def get_risk_level(permission: Union[ChromePermission, str]) -> RiskLevel:
         if permission in permission_list:
             return risk_level
     return RiskLevel.NONE
+
+
+RISK_COMMENTS = {
+    # Dynamic Script Execution
+    "dynamic_script_execution": (
+        "The extension uses risky JavaScript patterns such as eval, document.write, or new Function, which can enable arbitrary code execution if not properly sanitized."
+    ),
+
+    # Manifest Fields
+    "background": (
+        "Persistent background pages can maintain long-lived scripts, increasing the attack surface for malicious behavior."
+    ),
+    "devtools_page": (
+        "DevTools pages can inspect and interact with webpages, potentially used for spying or data exfiltration."
+    ),
+    "side_panel": (
+        "Side panels may be used to inject or display unauthorized content alongside legitimate pages."
+    ),
+    "content_scripts": (
+        "Statically declared content scripts may target a wide range of URLs. If match patterns are too broad or include wildcards, "
+        "they can be used to monitor or modify web content without user consent."
+    ),
+    "chrome_url_overrides": (
+        "Overriding Chrome's default pages (e.g., new tab, history) can mislead users by displaying unwanted ads or phishing content."
+    ),
+    "chrome_settings_overrides": (
+        "Modifying search engines or startup pages may redirect users to phishing or adware websites."
+    ),
+    "commands": (
+        "Extensions can register hotkeys to trigger background actions. If misused, they can enable stealthy malicious behaviors without user awareness."
+    ),
+    "content_security_policy": (
+        "Weak or permissive content security policies (e.g., allowing 'unsafe-eval') can expose the extension to script injection or execution of malicious code."
+    ),
+    "externally_connectable": (
+        "Allows external web pages or apps to send messages to the extension. This can be abused for command-and-control channels or data exfiltration."
+    ),
+    "web_accessible_resources": (
+        "This allows extension files to be accessed by webpages. If poorly scoped or if sensitive scripts are exposed, it can lead to unauthorized access or script injection."
+    ),
+}
+
+PERMISSION_RISK_COMMENTS = {
+    # --- NONE ---
+    "side_panel": "Low-risk UI integration; dangerous behavior depends on associated JS activity.",
+    
+    # --- LOW ---
+    "devtools_page": "Grants access to Chrome DevTools, may allow interception of developer network data.",
+    ChromePermission.ACTIVE_TAB: "Grants temporary access to the active tab, limited in duration and scope.",
+    ChromePermission.NOTIFICATIONS: "Can show popups; risk arises with spam or phishing prompts.",
+    ChromePermission.BACKGROUND: "Allows persistent background tasks; execution risk depends on script behavior.",
+    ChromePermission.WEB_REQUEST_BLOCKING: "Enables synchronous request blocking — risky only when paired with modification logic.",
+    
+    # --- MEDIUM ---
+    ChromePermission.STORAGE: "Can hold sensitive tokens or credentials if misused.",
+    ChromePermission.CLIPBOARD_WRITE: "May overwrite user clipboard, potentially with malicious content.",
+    ChromePermission.DOWNLOADS: "Can initiate or alter file downloads — possible vector for malware.",
+    ChromePermission.GEOLOCATION: "May track physical location; privacy risk based on use context.",
+    ChromePermission.NATIVE_MESSAGING: "Enables communication with native apps — powerful if abused.",
+    ChromePermission.MANAGEMENT: "Allows reading extension info; can detect or affect other extensions.",
+    "background": "Allows persistent background service; may be used for tracking or stealthy execution.",
+    "chrome_url_overrides": "Overrides default Chrome pages like 'newtab'; can mislead users or inject tracking.",
+    
+    # --- HIGH ---
+    ChromePermission.CLIPBOARD_READ: "May access sensitive clipboard content (e.g., passwords, crypto keys).",
+    ChromePermission.TABS: "Can inspect and manipulate open tabs, enabling surveillance or injection.",
+    ChromePermission.CONTENT_SETTINGS: "Can override site settings like JS/CSS permissions — used to bypass restrictions.",
+    ChromePermission.DECLARATIVE_NET_REQUEST: "Used to filter or rewrite network requests — impacts privacy and content.",
+    ChromePermission.HISTORY: "Accesses full browsing history; often used for profiling or data theft.",
+    ChromePermission.PROXY: "Can redirect or inspect all web traffic via proxy configuration.",
+    ChromePermission.DESKTOP_CAPTURE: "Captures screen or window content; potential for surveillance or data leak.",
+    "https://*/*": "Wildcard host permission — grants broad access to HTTPS pages.",
+    "http://*/*": "Wildcard host permission — grants broad access to HTTP pages.",
+    "file:///*": "Access to local files — extremely sensitive if paired with exfiltration logic.",
+    
+    # --- CRITICAL ---
+    ChromePermission.COOKIES: "Access to site cookies; can hijack sessions or leak sensitive auth tokens.",
+    ChromePermission.DEBUGGER: "Full debugging control over tabs — extremely powerful and abusable.",
+    ChromePermission.WEB_REQUEST: "Intercept and modify all requests — commonly misused for surveillance or tampering.",
+    ChromePermission.DECLARATIVE_WEB_REQUEST: "Legacy alternative to `webRequest`; allows modification of requests without code.",
+    "<all_urls>": "Complete access to all URLs — requires strong justification and verification.",
+    "*://*/:": "Malformed or nonstandard wildcard — may indicate sloppy or overly permissive configuration.",
+    "*://*/*": "Generic wildcard — indicates total access to all protocols and hosts."
+}
 
 
 def check_domain_urlhaus(domain: str) -> bool:
@@ -435,29 +516,43 @@ def evaluate_manifest_field(field: str, extension: Extension) -> RiskLevel:
         case "content_scripts":
             return evaluate_content_scripts(extension.manifest.commands)  # Only flags hidden commands
         case _:
-            return get_risk_level()
+            return get_risk_level(field)
         
 def analyze_js_risks(script_sources: dict[str, list[str]]) -> RiskLevel:
     """
     Analyzes extracted JavaScript for risky patterns and assigns a risk level.
+    
+    Risk Patterns:
+      - CRITICAL risk for patterns that directly allow arbitrary code execution:
+          * eval() when used with a literal string or unclear input.
+          * document.write() when used to insert external content.
+          * new Function() which creates a function from a string.
+      - HIGH risk for patterns that schedule code execution with string arguments:
+          * setTimeout() or setInterval() where the first argument is a string literal.
+          * chrome.scripting.executeScript() is flagged because it injects code into pages.
+      - MEDIUM risk for generic network calls (fetch, XMLHttpRequest) that may load external content.
     """
+
+    # Define refined dynamic patterns:
     risk_patterns = {
+        # CRITICAL: Direct code execution patterns.
         RiskLevel.CRITICAL: [
-            r"eval\s*\(",  # Malicious eval usage
-            r"document\.write\s*\(",  # Malicious document.write
-            r"new Function\s*\(",  # Malicious function creation
-            r"chrome\.scripting\.executeScript\s*\(",  # Chrome extension script execution
+            r"eval\s*\(\s*['\"].+?['\"]\s*\)", # Matches eval with any content (could be dangerous, especially if not sanitized)
+            r"document\.write\s*\(\s*['\"].+?['\"]\s*\)", # Matches document.write with a literal string, which might inject external resources
+            r"new\s+Function\s*\(", # Matches new Function constructor usage
         ],
+        # HIGH: Scheduling functions that accept string arguments (implying dynamic code execution)
         RiskLevel.HIGH: [
-            r"setTimeout\s*\(.*?\)",  # Timed execution (can be dangerous)
-            r"setInterval\s*\(.*?\)",  # Repeated timed execution
-            r"fetch\s*\(['\"](https?://[^\s\"']+)['\"]\)",  # Fetch exfiltration (to malicious domains)
-            # r"XMLHttpRequest\s*\(["' ](https?://[^\s\"']+)['\"]",  # XMLHttpRequest exfiltration
+            r"setTimeout\s*\(\s*['\"].+?['\"]\s*,",  # Matches setTimeout if the first parameter is a string literal
+            r"setInterval\s*\(\s*['\"].+?['\"]\s*,", # Matches setInterval if the first parameter is a string literal
+            r"chrome\.scripting\.executeScript\s*\(", # Matches chrome.scripting.executeScript usage
+            r"fetch\s*\(['\"](https?://[^\s\"']+)['\"]\)",  # Fetch exfiltration (to malicious domains) 
             r"document\.createElement\('script'\)\.src\s*=\s*['\"](https?://[^\s\"']+)['\"]",  # Dynamic script injection
         ],
+        # MEDIUM: Network calls that could load external content (if unsanitized, could lead to remote code execution indirectly)
         RiskLevel.MEDIUM: [
-            r"fetch\s*\(",  # Fetching from potentially untrusted sources
-            r"XMLHttpRequest",  # Risky XMLHttpRequest usage
+            r"fetch\s*\(",  # Matches fetch with an external URL literal
+            r"XMLHttpRequest"  # Matches XMLHttpRequest usage (generic, so considered medium risk)
         ]
     }
     
@@ -471,69 +566,133 @@ def analyze_js_risks(script_sources: dict[str, list[str]]) -> RiskLevel:
     
     return net_risk
     
+    
+def get_vulnerability_info(dep_name: str) -> dict:
+    """
+    Fetch vulnerability information from a public API (e.g., NPM, Snyk).
+    For example, using NPM's audit API or a vulnerability database.
+    """
+    url = f"https://registry.npmjs.org/{dep_name}/latest"  # Using NPM API as an example
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        return response.json()
+    return {}
+
+def analyze_dependency_risks(extension) -> list[RiskMapping]:
+    """
+    Analyzes dependencies for potential risks based on version checks and external databases.
+    """
+    dependency_risk = []
+    
+    # Fetch each dependency from the extension
+    for dep, version in extension.dependencies.items():
+        # Get vulnerability info for the dependency
+        vuln_info = get_vulnerability_info(dep)
+        
+        if vuln_info:
+            # Example: check if the version is flagged in the vulnerability database
+            latest_version = packaging.version.parse(vuln_info.get('version', '0.0.0'))
+            
+            if packaging.version.parse(version) < latest_version:
+                # Flag it as risky
+                dependency_risk.append(RiskMapping(
+                    permission=f"outdated_dependency: {dep}",
+                    risk_level=RiskLevel.HIGH,
+                    comment=f"Outdated version of {dep}; newer versions are recommended for security reasons."
+                ))
+    
+    return dependency_risk    
+    
+def generate_risk_mapping(name: str, risk_level: RiskLevel, comment_lookup: dict[str, str]) -> list[RiskMapping]:
+    """
+    Generates a list with a single RiskMapping if risk_level is not NONE.
+    Returns an empty list otherwise.
+    """
+    if risk_level == RiskLevel.NONE:
+        return []
+    return [RiskMapping(
+        permission=name,
+        risk_level=risk_level,
+        comment=comment_lookup.get(name, "")
+    )]    
+    
+    
+    
+    
 ## The risk report is entirely based on permissions, this is a possibly 
 ## important change point based on implementation
 def get_risk_report(extension: Extension) -> RiskReport:
     # Track Permission Risks
-    permissions_risk = [
-        RiskMapping(permission=x, risk_level=get_risk_level(x), warning="new_field_added_to_make_mohammed workeasier maybe")
-        for x in extension.permissions
-    ]
+    # permissions_risk = [
+    #     RiskMapping(permission=x, risk_level=get_risk_level(x), warning="new_field_added_to_make_mohammed workeasier maybe")
+    #     for x in extension.permissions
+    # ]
+    permissions_risk = []
+    for perm in extension.permissions:
+        risk_level = get_risk_level(perm)
+        comment = PERMISSION_RISK_COMMENTS.get(perm, f"No comment defined for '{perm}'")
+        permissions_risk.append(RiskMapping(permission=perm, risk_level=risk_level, comment=comment))
     
-    # Track all manifest-based risks
-    manifest_risk = [
-        RiskMapping(permission=field, risk_level=evaluate_manifest_field(field, extension, warning="hello"))
-        for field in extension.manifest_fields
-    ]
+    # # Track all manifest-based risks
+    # manifest_risk = [
+    #     RiskMapping(permission=field, risk_level=evaluate_manifest_field(field, extension, warning="hello"))
+    #     for field in extension.manifest_fields
+    # ]
+    # For manifest fields
+    manifest_risk = []
+    for field in extension.manifest_fields:
+        risk_level = evaluate_manifest_field(field, extension)
+        manifest_risk += generate_risk_mapping(
+            name=field,
+            risk_level=risk_level,
+            comment_lookup=RISK_COMMENTS
+        )
     
     # Track dynamic script execution risks
-    dynamic_script_risk = []
-    # for js_file in extension.javascript_files:
-    #     with open(js_file, "r", encoding="utf-8", errors="ignore") as f:
-    #         content = f.read()
-    #         if "eval(" in content or "document.write(" in content:
-    #             dynamic_script_risk.append(PermissionRiskMapping(
-    #                 permission="dynamic_script_execution",
-    #                 risk_level=RiskLevel.HIGH
-    #             ))
-    #         if "setTimeout(" in content or "fetch(" in content:
-    #             dynamic_script_risk.append(PermissionRiskMapping(
-    #                 permission="remote_script_loading",
-    #                 risk_level=RiskLevel.MEDIUM
-    #             ))
+    # script_sources = extension.extract_js_sources    
+    # dynamic_script_risk = [
+    #     RiskMapping(
+    #         permission="dynamic_script_execution",
+    #         risk_level=analyze_js_risks(script_sources)
+    #     )
+    # ]
+    # For dynamic script execution
     script_sources = extension.extract_js_sources
+    risk_level = analyze_js_risks(script_sources)
+    dynamic_script_risk = generate_risk_mapping(
+        name="dynamic_script_execution",
+        risk_level=risk_level,
+        comment_lookup=RISK_COMMENTS
+    )
     
-    
-
     # Dependency Analysis Risk
-    # dependency_risk = []
-    # for dep, version in extension.dependencies.items():
-    #     if dep == "jquery" and version < "3.0.0":
-    #         dependency_risk.append(PermissionRiskMapping(
-    #             permission=f"outdated_dependency: {dep}",
-    #             risk_level=RiskLevel.HIGH
-    #         ))
+    # scrapped due to static analysis and time
+    # # flagging known malicious urls from the manifest - test
+    # malicious_urls = []
+    # for url in extension.manifest_urls:  
+    #     domain = urlparse(url).netloc.split(':')[0]
+    #     if check_domain_urlhaus(domain): 
+    #         malicious_urls.append(url)
+    # if malicious_urls:
+    #     risk_score = min(100, risk_score + get_risk_score(RiskLevel.HIGH))
     
-    #Risk cap 100
-    risk_score = min(100, sum(get_risk_score(p.risk_level)
-                     for p in permissions_risk))
+    # Risk cap 100
+    # Calculate the risk score from permissions, manifest, and dynamic script risks
+    risk_score = min(100, sum(get_risk_score(p.risk_level) for p in permissions_risk))
     
-    # post-processing multi-field check
-    # done based on fields processing only so far
-    # for now, treating the unsafe sandbox csp + overly permisive externally connectable as critical risk 
+    # Add manifest risk levels to the score
+    risk_score = min(100, risk_score + sum(get_risk_score(f.risk_level) for f in manifest_risk))
+    
+    # Add dynamic script execution risk to the score
+    risk_score = min(100, risk_score + sum(get_risk_score(f.risk_level) for f in dynamic_script_risk))
+    
+    # Post-processing multi-field checks for manifest risks
+    # Treat unsafe sandbox CSP + overly permissive externally connectable as critical risk
     if any(f.permission == "content_security_policy" and f.risk_level == RiskLevel.LOW for f in manifest_risk) and \
         any(f.permission == "externally_connectable" and f.risk_level == RiskLevel.HIGH for f in manifest_risk):
             risk_score = min(100, risk_score + get_risk_score(RiskLevel.CRITICAL))
     
-    # flagging known malicious urls from the manifest - test
-    malicious_urls = []
-    for url in extension.manifest_urls:  
-        domain = urlparse(url).netloc.split(':')[0]
-        if check_domain_urlhaus(domain): 
-            malicious_urls.append(url)
-    
-    if malicious_urls:
-        risk_score = min(100, risk_score + get_risk_score(RiskLevel.HIGH))
     
     return RiskReport(
         name=extension.name,
@@ -541,9 +700,11 @@ def get_risk_report(extension: Extension) -> RiskReport:
         metadata={},
         javascript_files=extension.javascript_files,
         urls=extension.urls,
-        fetch_calls=[],
+        fetch_calls=[],  # Placeholder for later if needed
         risk_score=risk_score,
         permissions=permissions_risk,
-        mal_urls=malicious_urls
+        manifests=manifest_risk,
+        dynamic=dynamic_script_risk,
+        # mal_urls=malicious_urls
         # raw_manifest=extension.manifest.json()
-    )
+    )        
