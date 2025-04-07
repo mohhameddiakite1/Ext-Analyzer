@@ -531,14 +531,14 @@ def evaluate_manifest_field(field: str, extension: Extension) -> RiskLevel:
                 # Only flags hidden commands
                 return evaluate_commands(extension.manifest.commands)
         case "content_scripts":
-            if extension.manifest.commands is not None:  # Error handling for empty commands
+            if extension.manifest.content_scripts is not None:  # Error handling for empty commands
                 # Only flags hidden commands
-                return evaluate_content_scripts(extension.manifest.commands)
+                return evaluate_content_scripts(extension.manifest.content_scripts)
         case _:
             return get_risk_level(field)
 
 
-def analyze_js_risks(script_sources: dict[str, list[str]]) -> RiskLevel:
+def analyze_js_risks(dynamic_sources: list[str]) -> RiskLevel:
     """
     Analyzes extracted JavaScript for risky patterns and assigns a risk level.
 
@@ -586,13 +586,26 @@ def analyze_js_risks(script_sources: dict[str, list[str]]) -> RiskLevel:
 
     net_risk = RiskLevel.NONE
 
-    for source_type, scripts in script_sources.items():
-        for script in scripts:
-            for risk_level, patterns in risk_patterns.items():
-                if any(re.search(pattern, script) for pattern in patterns):
-                    net_risk = max(net_risk, risk_level,
-                                   key=lambda r: get_risk_score(r))
+    # Iterate over each file path flagged as containing dynamic scripts.
+    for file_path in dynamic_sources:
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+                content = (content.decode('utf-8', errors='ignore')
+                           if isinstance(content, bytes) else content)
+        except Exception:
+            continue
 
+        # Check content against each risk level's patterns
+        for risk_level, patterns in risk_patterns.items():
+            for pattern in patterns:
+                match = re.search(pattern, content) 
+                if match:
+                    print(f"File {file_path} triggered pattern: {pattern}")
+                    print(f"Matched substring: {match.group()}")
+                    net_risk = max(net_risk, risk_level, key=lambda r: get_risk_score(r))
+                    break # stops after first match for the risk level but can be removed and manipulated to log all
+                
     return net_risk
 
 
@@ -690,8 +703,11 @@ def get_risk_report(extension: Extension) -> RiskReport:
     #     )
     # ]
     # For dynamic script execution
-    script_sources = extension.extract_js_sources
-    risk_level = analyze_js_risks(script_sources)
+    dynamic_script_risk = []
+    dynamic_srcs = extension.extract_js_sources
+    if dynamic_srcs:
+        risk_level = analyze_js_risks(dynamic_srcs)
+
     dynamic_script_risk = generate_risk_mapping(
         name="dynamic_script_execution",
         risk_level=risk_level,
@@ -739,6 +755,7 @@ def get_risk_report(extension: Extension) -> RiskReport:
         permissions=permissions_risk,
         manifests=manifest_risk,
         dynamic=dynamic_script_risk,
+        dynamic_sources=dynamic_srcs 
         # mal_urls=malicious_urls
         # raw_manifest=extension.manifest.json()
     )

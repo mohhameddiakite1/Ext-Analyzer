@@ -3,6 +3,7 @@ import sys
 import json
 from crx_analyzer.cli import analyze
 import re
+from pprint import pprint
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -98,7 +99,7 @@ def analyze_url():
         except json.JSONDecodeError:
             analysis_results = {}  # Default to empty dict if parsing fails
 
-        print(analysis_results)
+        pprint(analysis_results)
         return render_template('index.html', analysis_data=analysis_results)
 
 

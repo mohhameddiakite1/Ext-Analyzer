@@ -281,4 +281,7 @@ class RiskReport(BaseModel):
     javascript_files: List[str]
     urls: List[str]
     fetch_calls: List[str]
+    manifests: List[RiskMapping]
+    dynamic: List[RiskMapping]
+    dynamic_sources: List[str]
     # raw_manifest: str

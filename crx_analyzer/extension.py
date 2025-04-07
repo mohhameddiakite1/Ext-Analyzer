@@ -83,7 +83,7 @@ class Extension:
     def __exit__(self, exc_type, exc_value, traceback):
         os.remove(self.extension_zip_path)
         shutil.rmtree(self.extension_dir_path)
-
+        
     @property
     def name(self) -> str:
         return self.manifest.name
@@ -129,26 +129,24 @@ class Extension:
     
     @property
     def html_files(self) -> list[str]:
-        html_files = []
+        h_files = []
         for root, _, files in os.walk(self.extension_dir_path):
             for file in files:
                 if file.endswith(".html"):
-                    html_files.append(os.path.join(root, file))
-        return html_files
+                    h_files.append(os.path.join(root, file))
+        return h_files
     
     @property
-    def extract_js_sources(self) -> dict[str, list[str]]:
+    def extract_js_sources(self) -> list[str]:
         """
         Extracts JavaScript code from all sources within the extension:
         - Standalone .js files
         - Inline <script> tags in .html files
         - Dynamic execution patterns from scripts
         """
-        script_sources = {
-            "js_files": [],
-            "inline_scripts": [],
-            "dynamic_scripts": []
-        }
+     
+        dynamic_script_sources = []
+        
         # Define dynamic patterns
         dynamic_patterns = [
             r"eval\s*\(",                                       # Detect eval()
@@ -170,24 +168,24 @@ class Extension:
                 
                 # Extract from .js files
                 if file.endswith(".js"):
-                    script_sources["js_files"].append(file_path)
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         script_content = f.read()
+                        script_content = script_content.decode('utf-8', errors='ignore') if isinstance(script_content, bytes) else script_content
+                        # print(f"⚠️ Dynamic pattern checked in: {script_content}")
                         if combined_dynamic_pattern.search(script_content):
-                            script_sources["dynamic_scripts"].append(file_path)
-                
+                            # print(f"⚠️ Dynamic pattern matched in: {file_path}")
+                            dynamic_script_sources.append(file_path) 
                 # Extract inline scripts from .html files
                 elif file.endswith(".html"):
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         html_content = f.read()
+                        html_content = html_content.decode('utf-8', errors='ignore') if isinstance(html_content, bytes) else html_content
                         inline_scripts = re.findall(r"<script.*?>(.*?)</script>", html_content, re.DOTALL)
-                        script_sources["inline_scripts"].extend(inline_scripts)
-                        # Check inline scripts for dynamic patterns
-                        for inline_script in inline_scripts:
-                            if combined_dynamic_pattern.search(inline_script):
-                                script_sources["dynamic_scripts"].append(inline_script)
+                        # If any inline script contains a dynamic pattern, flag this file
+                        if any(combined_dynamic_pattern.search(script) for script in inline_scripts):
+                            dynamic_script_sources.append(file_path)
 
-        return script_sources
+        return dynamic_script_sources
     
     @property
     def urls(self) -> list[str]:
@@ -201,6 +199,8 @@ class Extension:
         for js_file in self.javascript_files:
             with open(js_file, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
+                content = content.decode('utf-8', errors='ignore') if isinstance(content, bytes) else content
+
                 for pattern in patterns:
                     found_urls = re.findall(pattern, content)
                     urls.update(found_urls)

@@ -1,56 +1,113 @@
 {
-    "name": "Boxel Rebound",
-    "sha256": "ebc63317553605ad7902220d96f4a77da363875c4ac308a566b5e5b9e5036641",
+    "name": "__MSG_extensionName__",
+    "sha256": "edc8bf2cf60ca3897138dfa890cc3face9d0b649d50eef906d0a48a90b4d4b76",
     "metadata": {},
-    "risk_score": 10,
+    "risk_score": 100,
     "permissions": [
         {
+            "permission": "alarms",
+            "risk_level": "none",
+            "comment": "No comment defined for 'alarms'"
+        },
+        {
+            "permission": "contextMenus",
+            "risk_level": "none",
+            "comment": "No comment defined for 'contextMenus'"
+        },
+        {
+            "permission": "downloads",
+            "risk_level": "medium",
+            "comment": "Can initiate or alter file downloads \u2014 possible vector for malware."
+        },
+        {
+            "permission": "history",
+            "risk_level": "high",
+            "comment": "Accesses full browsing history; often used for profiling or data theft."
+        },
+        {
+            "permission": "offscreen",
+            "risk_level": "none",
+            "comment": "No comment defined for 'offscreen'"
+        },
+        {
             "permission": "storage",
-            "risk_level": "medium"
+            "risk_level": "medium",
+            "comment": "Can hold sensitive tokens or credentials if misused."
+        },
+        {
+            "permission": "tabs",
+            "risk_level": "high",
+            "comment": "Can inspect and manipulate open tabs, enabling surveillance or injection."
+        },
+        {
+            "permission": "unlimitedStorage",
+            "risk_level": "none",
+            "comment": "No comment defined for 'unlimitedStorage'"
+        },
+        {
+            "permission": "webNavigation",
+            "risk_level": "medium",
+            "comment": "No comment defined for 'webNavigation'"
+        },
+        {
+            "permission": "<all_urls>",
+            "risk_level": "critical",
+            "comment": "Complete access to all URLs \u2014 requires strong justification and verification."
         }
     ],
     "javascript_files": [
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/FileSaver.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Interface.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/jquery-3.3.1.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Clock.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Timer.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/tweenjs-NEXT.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Tiles.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Game.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/StorageManager.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/preloadjs-NEXT.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/LevelMap.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/draggable.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Theme.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Home.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/easeljs-NEXT.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/DialogWindow.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/soundjs-NEXT.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/LunchBox.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/buy.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/LevelEditor.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/AssetManager.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Player.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Button.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Gravity.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Particles.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/rewards.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/lz-string.min.js",
-        "tmp/iginnfkhmmfhlkagcmpgofnjhanpmklb/www/js/Extension.js"
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/add-sites.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/stats.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/diagnostics.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/background.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/ticker.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/lockdown.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/blocked.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/content.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/options.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/override.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/common.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/popup.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/jquery-ui/jquery-ui.min.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/jquery-ui/external/jquery/jquery.js"
     ],
     "urls": [
-        "https://www.dopplercreative.com/boxel-rebound-portal/index.php",
-        "https://www.youtube.com/@dopplercreative/videos",
-        "https://microsoftedge.microsoft.com/addons/detail/boxel-rebound/icjmhhdmoccaalnjnalamfnfddbeaoke",
-        "http://www.opensource.org/licenses/mit-license.html",
-        "https://chrome.google.com/webstore/detail/tiny-tycoon/bamdkjfjhhnjcgcjmmjdnncpglihepoi",
-        "http://createjs.com/",
-        "https://stackoverflow.com/a/21903119/2510368",
-        "http://stackoverflow.com/a/3642850/2510368",
-        "https://addons.mozilla.org/en-US/firefox/addon/boxel-rebound-game/",
-        "http://code.google.com/p/swfobject/)",
-        "https://chromewebstore.google.com/detail/boxel-rebound/iginnfkhmmfhlkagcmpgofnjhanpmklb/reviews"
+        "http://jqueryui.com",
+        "http://mozilla.org/MPL/2.0/.",
+        "https://www.proginosko.com/leechblock/support/",
+        "https://www.proginosko.com/leechblock/"
     ],
-    "fetch_calls": []
+    "fetch_calls": [],
+    "manifests": [
+        {
+            "permission": "background",
+            "risk_level": "low",
+            "comment": "Persistent background pages can maintain long-lived scripts, increasing the attack surface for malicious behavior."
+        },
+        {
+            "permission": "commands",
+            "risk_level": "high",
+            "comment": "Extensions can register hotkeys to trigger background actions. If misused, they can enable stealthy malicious behaviors without user awareness."
+        },
+        {
+            "permission": "content_scripts",
+            "risk_level": "critical",
+            "comment": "Statically declared content scripts may target a wide range of URLs. If match patterns are too broad or include wildcards, they can be used to monitor or modify web content without user consent."
+        }
+    ],
+    "dynamic": [
+        {
+            "permission": "dynamic_script_execution",
+            "risk_level": "medium",
+            "comment": "The extension uses risky JavaScript patterns such as eval, document.write, or new Function, which can enable arbitrary code execution if not properly sanitized."
+        }
+    ],
+    "dynamic_sources": [
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/background.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/ticker.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/blocked.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/override.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/jquery-ui/jquery-ui.min.js",
+        "tmp/blaaajhemilngeeffpbfkdjjoefldkok/jquery-ui/external/jquery/jquery.js"
+    ]
 }

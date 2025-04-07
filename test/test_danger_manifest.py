@@ -1,8 +1,9 @@
-import json
+import json, re
 from unittest.mock import Mock, mock_open
 import pytest
 import os
 import shutil
+from pathlib import Path
 from crx_analyzer.extension import Extension, Browser
 from crx_analyzer.risk import (
     evaluate_externally_connectable,
@@ -13,6 +14,7 @@ from crx_analyzer.risk import (
     evaluate_commands,
     analyze_js_risks,
     generate_risk_mapping,
+    get_risk_report,
 )
 from crx_analyzer.models import (
     ChromeManifest,
@@ -69,19 +71,33 @@ test_cases = [
     ),
 ]
 
-
 def fake_sha256(data):
     class FakeHash:
         def hexdigest(self):
             return "f4396645d06777cb879406c3226cb69b60fc923baff1868fb5db4588ef0e07e6"
-
     return FakeHash()
+
+mocked_file = mock_open(read_data=b"mocked file content")
+real_open = open  # preserve the original open
+
+def smart_open(file, mode='r', *args, **kwargs):
+    # Only return mocked content for binary reads — i.e., where real file doesn't exist
+    if 'b' in mode and 'r' in mode:
+        try:
+            return real_open(file, mode, *args, **kwargs)
+        except FileNotFoundError:
+            return mocked_file()
+    return real_open(file, mode, *args, **kwargs)    
 
 
 @pytest.mark.parametrize("manifest_file,expected", test_cases)
 def test_manifest(monkeypatch, manifest_file, expected):
     
-    manifest_data = json.load(open(manifest_file))
+    """Test risk report generation for a "known" hazardous extension."""
+    # Path to the unpacked extension
+    extension_path = Path(__file__).parent.parent / "hazardous_test_extension"
+    manifest_path = Path(__file__).parent.parent / "hazardous_test_extension" / "manifest.json"
+    manifest_data = json.load(open(manifest_path))
     manifest = ChromeManifest(**manifest_data)
     
     monkeypatch.setattr(
@@ -97,16 +113,14 @@ def test_manifest(monkeypatch, manifest_file, expected):
         "crx_analyzer.extension.Extension._Extension__get_manifest", 
         lambda self: manifest  # Directly return the mock object
     )
-
-    
     # Patch open to return mock file data
-    mocked_file = mock_open(read_data=b"mocked file content")
-    monkeypatch.setattr("builtins.open", mocked_file)
+    monkeypatch.setattr("builtins.open", smart_open)
     
     
     ## aim to override the autodownload
-    extension_id = "fake"
+    extension_id = "hazardous"
     e = Extension(extension_id, Browser.EDGE)
+    monkeypatch.setattr(e, "extension_dir_path", extension_path)
     
     
     
@@ -114,17 +128,15 @@ def test_manifest(monkeypatch, manifest_file, expected):
     assert e.sha256 == "f4396645d06777cb879406c3226cb69b60fc923baff1868fb5db4588ef0e07e6"
     
     assert e.manifest == manifest
+       
+    # script_sources = e.extract_js_sources
+    # print(script_sources)
+    # if script_sources:
+    #     risk_level = analyze_js_risks(script_sources)
+    # print(risk_level)
     
-    print(evaluate_manifest_field("chrome_url_overrides", e))
-    # print(type(e.manifest.content_scripts))
-    # print(e.manifest.content_scripts)
-    
-    # with  e as extension:
-    
-  
-    # report = get_risk_report(e)
-    # print(manifest.model_dump(exclude_unset=True))
-    # print(e.manifest_fields)
+    report = get_risk_report(e)
+    print(report)
     
 
 @pytest.mark.parametrize("csp_value, expected_risk", [
@@ -289,8 +301,3 @@ def test_dynamic_script_execution():
     sources = {"js_files": ["eval('x')\ndocument.write('bad')\nfetch('http://a')"]}
     risks = analyze_js_risks(sources)
     assert risks == RiskLevel.CRITICAL
- 
- 
-"""Test risk report generation for a known hazardous extension."""
-    # Path to the unpacked extension
-    extension_dir = Path(__file__).parent.parent / "hazardous_extension" 
