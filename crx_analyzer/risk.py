@@ -160,14 +160,14 @@ RISK_COMMENTS = {
 PERMISSION_RISK_COMMENTS = {
     # --- NONE ---
     "side_panel": "Low-risk UI integration; dangerous behavior depends on associated JS activity.",
-    
+
     # --- LOW ---
     "devtools_page": "Grants access to Chrome DevTools, may allow interception of developer network data.",
     ChromePermission.ACTIVE_TAB: "Grants temporary access to the active tab, limited in duration and scope.",
     ChromePermission.NOTIFICATIONS: "Can show popups; risk arises with spam or phishing prompts.",
     ChromePermission.BACKGROUND: "Allows persistent background tasks; execution risk depends on script behavior.",
     ChromePermission.WEB_REQUEST_BLOCKING: "Enables synchronous request blocking — risky only when paired with modification logic.",
-    
+
     # --- MEDIUM ---
     ChromePermission.STORAGE: "Can hold sensitive tokens or credentials if misused.",
     ChromePermission.CLIPBOARD_WRITE: "May overwrite user clipboard, potentially with malicious content.",
@@ -177,7 +177,7 @@ PERMISSION_RISK_COMMENTS = {
     ChromePermission.MANAGEMENT: "Allows reading extension info; can detect or affect other extensions.",
     "background": "Allows persistent background service; may be used for tracking or stealthy execution.",
     "chrome_url_overrides": "Overrides default Chrome pages like 'newtab'; can mislead users or inject tracking.",
-    
+
     # --- HIGH ---
     ChromePermission.CLIPBOARD_READ: "May access sensitive clipboard content (e.g., passwords, crypto keys).",
     ChromePermission.TABS: "Can inspect and manipulate open tabs, enabling surveillance or injection.",
@@ -189,7 +189,7 @@ PERMISSION_RISK_COMMENTS = {
     "https://*/*": "Wildcard host permission — grants broad access to HTTPS pages.",
     "http://*/*": "Wildcard host permission — grants broad access to HTTP pages.",
     "file:///*": "Access to local files — extremely sensitive if paired with exfiltration logic.",
-    
+
     # --- CRITICAL ---
     ChromePermission.COOKIES: "Access to site cookies; can hijack sessions or leak sensitive auth tokens.",
     ChromePermission.DEBUGGER: "Full debugging control over tabs — extremely powerful and abusable.",
@@ -204,19 +204,19 @@ PERMISSION_RISK_COMMENTS = {
 def check_domain_urlhaus(domain: str) -> bool:
     """
     Check if the given domain is known to be malicious using the URLhaus API.
-    
+
     Parameters:
       domain (str): The domain to check (e.g., "evil.com")
-      
+
     Returns:
       bool: True if the domain is listed as malicious by URLhaus, False otherwise.
-    
+
     URLhaus is a public threat intelligence service provided by abuse.ch.
     It offers an API that does not require an API key for host lookup.
     """
     endpoint = "https://urlhaus.abuse.ch/api/v1/host/"
     payload = {"host": domain}
-    
+
     try:
         response = requests.post(endpoint, json=payload, timeout=5)
         response.raise_for_status()
@@ -239,47 +239,49 @@ def evaluate_csp(csp_value: Union[dict, str]) -> RiskLevel:
 
     Safe Examples:
     "default-src 'self'; script-src 'self'"  -> RiskLevel.NONE (Restricts to self)
-    
+
     High-Risk Examples:
     "default-src *"        -> RiskLevel.CRITICAL (Allows all resources from any domain)
     "script-src *"         -> RiskLevel.CRITICAL (Allows scripts from any source)
     "script-src 'unsafe-eval'"  -> RiskLevel.HIGH (Allows eval(), vulnerable to XSS)
     "script-src 'unsafe-inline'" -> RiskLevel.HIGH (Allows inline scripts, XSS risk)
-    
+
     Sandbox-Specific Risks:
     "sandbox": "script-src 'unsafe-eval'" -> RiskLevel.LOW (Eval allowed in sandbox)
     "sandbox": "default-src *" -> RiskLevel.LOW (Loads resources from anywhere)
     """
-    
+
     # convert to lowercase for case insensitive check
     if isinstance(csp_value, dict):
-        extension_policies = csp_value.get("extension_pages","").lower()
-        sandbox_policies = csp_value.get("sandbox","").lower()
+        extension_policies = csp_value.get("extension_pages", "").lower()
+        sandbox_policies = csp_value.get("sandbox", "").lower()
     elif isinstance(csp_value, str):
         extension_policies = csp_value.lower()
         sandbox_policies = ""
     else:
-        return RiskLevel.NONE # Invalud csp format, assume no risk
-        
-    # checking extension_pages csp as  it affects main extension security        
-    if "default-src *" in extension_policies or "script-src *" in extension_policies: # allows scripts from all domain's
+        return RiskLevel.NONE  # Invalud csp format, assume no risk
+
+    # checking extension_pages csp as  it affects main extension security
+    if "default-src *" in extension_policies or "script-src *" in extension_policies:  # allows scripts from all domain's
         return RiskLevel.CRITICAL
-    if "'unsafe-eval'" in extension_policies or "'unsafe-inline'" in extension_policies: # allows inline scripts or eval() xss
+    # allows inline scripts or eval() xss
+    if "'unsafe-eval'" in extension_policies or "'unsafe-inline'" in extension_policies:
         return RiskLevel.HIGH
     # check csp sandbox (less impactful)
     if "'unsafe-eval'" in sandbox_policies or "'unsafe-inline'" in sandbox_policies:
-        return RiskLevel.LOW #sandboxed eval is not ideal but not highly dangerous
+        return RiskLevel.LOW  # sandboxed eval is not ideal but not highly dangerous
     if "default-src *" in sandbox_policies or "script-src *" in sandbox_policies:
-        return RiskLevel.LOW #sandboxed loading scripts from anywhere is weak but contained
-    
+        return RiskLevel.LOW  # sandboxed loading scripts from anywhere is weak but contained
+
     return RiskLevel.NONE
+
 
 def evaluate_externally_connectable(value: ExternallyConnectable) -> RiskLevel:
     # need that functionality to scan url's for if a trusted source
     # should i add url's from manifest to checkable field in here or in extensions capabilities
     """
     Evaluate externally_connectable patterns.
-    
+
     Valid examples:
       "*://example.com/"      -> valid
       "http://*.example.org/*" -> valid
@@ -291,15 +293,15 @@ def evaluate_externally_connectable(value: ExternallyConnectable) -> RiskLevel:
       "http://*/*"            -> invalid (wildcard host)
     """
     matches = value.matches
-    
+
     if not matches:
         return RiskLevel.NONE
 
     for pattern in matches:
         normalized = pattern.strip()
-        
+
         # Directly reject <all_urls>
-        if normalized in {"<all_urls>","*://*/*"}:
+        if normalized in {"<all_urls>", "*://*/*"}:
             return RiskLevel.CRITICAL
 
         # Check valid schemes. We allow either an explicit scheme or a wildcard scheme.
@@ -327,19 +329,20 @@ def evaluate_externally_connectable(value: ExternallyConnectable) -> RiskLevel:
         else:
             # Invalid scheme altogether.
             return RiskLevel.HIGH
-        
+
     # If all patterns pass the above checks, we consider it low risk for a few trusted domains (check trusted)
     return RiskLevel.LOW
-    
+
+
 def evaluate_web_accessible_resources(value: list[dict]) -> RiskLevel:
     """
     Evaluate the risk of web_accessible_resources based on the manifest specification.
-    
+
     Each entry is expected to be a dict with the following keys:
       - "resources": a list of resource file paths.
       - "matches": a list of URL patterns allowed to access these resources.
       - "extension_ids": (optional) a list of extension IDs allowed to access these resources.
-      
+
     Evaluation logic:
       1. For "matches":
          - If any pattern is "<all_urls>" or "*://*/*", mark as CRITICAL.
@@ -370,19 +373,21 @@ def evaluate_web_accessible_resources(value: list[dict]) -> RiskLevel:
                     break
                 elif "*" in p:
                     # partial wildcard, mark as MEDIUM risk
-                    matches_risk = max(matches_risk, RiskLevel.MEDIUM, key=lambda r: get_risk_score(r))
+                    matches_risk = max(
+                        matches_risk, RiskLevel.MEDIUM, key=lambda r: get_risk_score(r))
             if matches_risk == RiskLevel.NONE:
                 matches_risk = RiskLevel.LOW
         else:
             matches_risk = RiskLevel.NONE
 
-        # Evaluate "extension_ids" 
+        # Evaluate "extension_ids"
         extension_ids = entry.get("extension_ids", [])
         ids_risk = RiskLevel.NONE
         if extension_ids:
             for ext_id in extension_ids:
                 if ext_id.strip() in {"*", ""}:
-                    ids_risk = RiskLevel.HIGH  # Unrestricted access by any extension.
+                    # Unrestricted access by any extension.
+                    ids_risk = RiskLevel.HIGH
                     break
             if ids_risk == RiskLevel.NONE:
                 ids_risk = RiskLevel.LOW
@@ -390,17 +395,18 @@ def evaluate_web_accessible_resources(value: list[dict]) -> RiskLevel:
             ids_risk = RiskLevel.NONE
 
         # Combine risk from matches and extension_ids: choose the higher risk.
-        entry_risk = max(matches_risk, ids_risk, key=lambda r: get_risk_score(r))
-        
+        entry_risk = max(matches_risk, ids_risk,
+                         key=lambda r: get_risk_score(r))
+
         # Evaluate "resources": if any resource is a JavaScript file, escalate risk to HIGH (unless CRITICAL).
         resources = entry.get("resources", [])
         for res in resources:
             if res.strip().lower().endswith(".js"):
                 if entry_risk != RiskLevel.CRITICAL:
                     entry_risk = RiskLevel.HIGH
-        
+
         net_risk = max(net_risk, entry_risk, key=lambda r: get_risk_score(r))
-    
+
     return net_risk
 
 
@@ -423,7 +429,8 @@ def evaluate_chrome_settings_override(override: Dict[str, Any]) -> RiskLevel:
     if homepage:
         domain = urlparse(homepage).netloc.split(':')[0]
         if check_domain_urlhaus(domain):
-            net_risk = max(net_risk, RiskLevel.HIGH, key=lambda r: get_risk_score(r))
+            net_risk = max(net_risk, RiskLevel.HIGH,
+                           key=lambda r: get_risk_score(r))
 
     # Evaluate search_provider override.
     search_provider = override.get("search_provider", {})
@@ -431,20 +438,21 @@ def evaluate_chrome_settings_override(override: Dict[str, Any]) -> RiskLevel:
     if search_url:
         domain = urlparse(search_url).netloc.split(':')[0]
         if check_domain_urlhaus(domain):
-            net_risk = max(net_risk, RiskLevel.CRITICAL, key=lambda r: get_risk_score(r))
+            net_risk = max(net_risk, RiskLevel.CRITICAL,
+                           key=lambda r: get_risk_score(r))
         # else:
-        #     net_risk = max(net_risk, RiskLevel.LOW, key=lambda r: get_risk_score(r))    
+        #     net_risk = max(net_risk, RiskLevel.LOW, key=lambda r: get_risk_score(r))
 
     # Evaluate startup_pages override.
     startup_pages = override.get("startup_pages", [])
     for page in startup_pages:
         domain = urlparse(page).netloc.split(':')[0]
         if check_domain_urlhaus(domain):
-            net_risk = max(net_risk, RiskLevel.MEDIUM, key=lambda r: get_risk_score(r))
-    
-            
+            net_risk = max(net_risk, RiskLevel.MEDIUM,
+                           key=lambda r: get_risk_score(r))
 
     return net_risk
+
 
 def evaluate_commands(commands: dict) -> RiskLevel:
     """
@@ -453,7 +461,7 @@ def evaluate_commands(commands: dict) -> RiskLevel:
     - The default command (_execute_browser_action) is normal (LOW risk).
     - A custom command with a defined suggested key is assigned MEDIUM risk.
     - A custom command missing a suggested key is flagged as HIGH risk.
-    
+
     The net risk is the maximum risk level among all commands.
     """
     net_risk = RiskLevel.NONE
@@ -475,53 +483,65 @@ def evaluate_commands(commands: dict) -> RiskLevel:
 
     return net_risk
 
+
 def evaluate_content_scripts(value: list[dict]) -> RiskLevel:
     """Analyze content scripts for broad access or injection risks."""
     net_risk = RiskLevel.NONE
-    
+
     for script in value:
         matches = script.get("matches", [])
-        
+
         # Check for overly broad match patterns
         for pattern in matches:
             if pattern == "<all_urls>" or pattern == "*://*/*":
                 return RiskLevel.CRITICAL  # Very broad match pattern
-            
+
             # Check if any match pattern uses wildcards
             elif "*" in pattern:
                 # More specific wildcard checks can be implemented based on the pattern
-                if re.match(r"^https?://.*\..*/.*$", pattern):  # matches common wildcard patterns
+                # matches common wildcard patterns
+                if re.match(r"^https?://.*\..*/.*$", pattern):
                     net_risk = max(net_risk, RiskLevel.MEDIUM)
-        
+
         # Check if the script has JavaScript files
         if any(res.endswith(".js") for res in script.get("js", [])):
             net_risk = max(net_risk, RiskLevel.HIGH)
-    
+
     return net_risk
-    
+
+
 def evaluate_manifest_field(field: str, extension: Extension) -> RiskLevel:
-    ## Felt that fields like side_panel, background, devtools page would be better off
-    ## decided by simple risk mapping before the JS analysis section
+    # Felt that fields like side_panel, background, devtools page would be better off
+    # decided by simple risk mapping before the JS analysis section
     match field:
         case "content_security_policy":
-            return evaluate_csp(extension.manifest.content_security_policy)
+            if extension.manifest.content_security_policy is not None:  # Error handling for empty CSP
+                return evaluate_csp(extension.manifest.content_security_policy)
         case "externally_connectable":
-            return evaluate_externally_connectable(extension.manifest.externally_connectable)
+            if extension.manifest.externally_connectable is not None:  # Error handling for empty connectable
+                return evaluate_externally_connectable(extension.manifest.externally_connectable)
         case "web_accessible_resources":
-            return evaluate_web_accessible_resources(extension.manifest.web_accessible_resources)
+            if extension.manifest.web_accessible_resources is not None:  # Error handling for empty resources
+                return evaluate_web_accessible_resources(extension.manifest.web_accessible_resources)
         case "chrome_settings_override":
-            return evaluate_chrome_settings_override(extension.manifest.chrome_settings_overrides)
+            if extension.manifest.chrome_settings_overrides is not None:  # Error handling for empty overrides
+                return evaluate_chrome_settings_override(extension.manifest.chrome_settings_overrides)
         case "commands":
-            return evaluate_commands(extension.manifest.commands)  # Only flags hidden commands
+            if extension.manifest.commands is not None:  # Error handling for empty commands
+                # Only flags hidden commands
+                return evaluate_commands(extension.manifest.commands)
         case "content_scripts":
-            return evaluate_content_scripts(extension.manifest.commands)  # Only flags hidden commands
+            if extension.manifest.commands is not None:  # Error handling for empty commands
+                # Only flags hidden commands
+                return evaluate_content_scripts(extension.manifest.commands)
         case _:
             return get_risk_level(field)
-        
+
+
 def analyze_js_risks(script_sources: dict[str, list[str]]) -> RiskLevel:
     """
     Analyzes extracted JavaScript for risky patterns and assigns a risk level.
-    
+
     Risk Patterns:
       - CRITICAL risk for patterns that directly allow arbitrary code execution:
           * eval() when used with a literal string or unclear input.
@@ -537,36 +557,45 @@ def analyze_js_risks(script_sources: dict[str, list[str]]) -> RiskLevel:
     risk_patterns = {
         # CRITICAL: Direct code execution patterns.
         RiskLevel.CRITICAL: [
-            r"eval\s*\(\s*['\"].+?['\"]\s*\)", # Matches eval with any content (could be dangerous, especially if not sanitized)
-            r"document\.write\s*\(\s*['\"].+?['\"]\s*\)", # Matches document.write with a literal string, which might inject external resources
-            r"new\s+Function\s*\(", # Matches new Function constructor usage
+            # Matches eval with any content (could be dangerous, especially if not sanitized)
+            r"eval\s*\(\s*['\"].+?['\"]\s*\)",
+            # Matches document.write with a literal string, which might inject external resources
+            r"document\.write\s*\(\s*['\"].+?['\"]\s*\)",
+            r"new\s+Function\s*\(",  # Matches new Function constructor usage
         ],
         # HIGH: Scheduling functions that accept string arguments (implying dynamic code execution)
         RiskLevel.HIGH: [
-            r"setTimeout\s*\(\s*['\"].+?['\"]\s*,",  # Matches setTimeout if the first parameter is a string literal
-            r"setInterval\s*\(\s*['\"].+?['\"]\s*,", # Matches setInterval if the first parameter is a string literal
-            r"chrome\.scripting\.executeScript\s*\(", # Matches chrome.scripting.executeScript usage
-            r"fetch\s*\(['\"](https?://[^\s\"']+)['\"]\)",  # Fetch exfiltration (to malicious domains) 
-            r"document\.createElement\('script'\)\.src\s*=\s*['\"](https?://[^\s\"']+)['\"]",  # Dynamic script injection
+            # Matches setTimeout if the first parameter is a string literal
+            r"setTimeout\s*\(\s*['\"].+?['\"]\s*,",
+            # Matches setInterval if the first parameter is a string literal
+            r"setInterval\s*\(\s*['\"].+?['\"]\s*,",
+            # Matches chrome.scripting.executeScript usage
+            r"chrome\.scripting\.executeScript\s*\(",
+            # Fetch exfiltration (to malicious domains)
+            r"fetch\s*\(['\"](https?://[^\s\"']+)['\"]\)",
+            # Dynamic script injection
+            r"document\.createElement\('script'\)\.src\s*=\s*['\"](https?://[^\s\"']+)['\"]",
         ],
         # MEDIUM: Network calls that could load external content (if unsanitized, could lead to remote code execution indirectly)
         RiskLevel.MEDIUM: [
             r"fetch\s*\(",  # Matches fetch with an external URL literal
-            r"XMLHttpRequest"  # Matches XMLHttpRequest usage (generic, so considered medium risk)
+            # Matches XMLHttpRequest usage (generic, so considered medium risk)
+            r"XMLHttpRequest"
         ]
     }
-    
+
     net_risk = RiskLevel.NONE
-    
+
     for source_type, scripts in script_sources.items():
         for script in scripts:
             for risk_level, patterns in risk_patterns.items():
                 if any(re.search(pattern, script) for pattern in patterns):
-                    net_risk = max(net_risk, risk_level, key=lambda r: get_risk_score(r))
-    
+                    net_risk = max(net_risk, risk_level,
+                                   key=lambda r: get_risk_score(r))
+
     return net_risk
-    
-    
+
+
 def get_vulnerability_info(dep_name: str) -> dict:
     """
     Fetch vulnerability information from a public API (e.g., NPM, Snyk).
@@ -574,26 +603,28 @@ def get_vulnerability_info(dep_name: str) -> dict:
     """
     url = f"https://registry.npmjs.org/{dep_name}/latest"  # Using NPM API as an example
     response = requests.get(url)
-    
+
     if response.status_code == 200:
         return response.json()
     return {}
+
 
 def analyze_dependency_risks(extension) -> list[RiskMapping]:
     """
     Analyzes dependencies for potential risks based on version checks and external databases.
     """
     dependency_risk = []
-    
+
     # Fetch each dependency from the extension
     for dep, version in extension.dependencies.items():
         # Get vulnerability info for the dependency
         vuln_info = get_vulnerability_info(dep)
-        
+
         if vuln_info:
             # Example: check if the version is flagged in the vulnerability database
-            latest_version = packaging.version.parse(vuln_info.get('version', '0.0.0'))
-            
+            latest_version = packaging.version.parse(
+                vuln_info.get('version', '0.0.0'))
+
             if packaging.version.parse(version) < latest_version:
                 # Flag it as risky
                 dependency_risk.append(RiskMapping(
@@ -601,9 +632,10 @@ def analyze_dependency_risks(extension) -> list[RiskMapping]:
                     risk_level=RiskLevel.HIGH,
                     comment=f"Outdated version of {dep}; newer versions are recommended for security reasons."
                 ))
-    
-    return dependency_risk    
-    
+
+    return dependency_risk
+
+
 def generate_risk_mapping(name: str, risk_level: RiskLevel, comment_lookup: dict[str, str]) -> list[RiskMapping]:
     """
     Generates a list with a single RiskMapping if risk_level is not NONE.
@@ -615,13 +647,11 @@ def generate_risk_mapping(name: str, risk_level: RiskLevel, comment_lookup: dict
         permission=name,
         risk_level=risk_level,
         comment=comment_lookup.get(name, "")
-    )]    
-    
-    
-    
-    
-## The risk report is entirely based on permissions, this is a possibly 
-## important change point based on implementation
+    )]
+
+
+# The risk report is entirely based on permissions, this is a possibly
+# important change point based on implementation
 def get_risk_report(extension: Extension) -> RiskReport:
     # Track Permission Risks
     # permissions_risk = [
@@ -631,9 +661,11 @@ def get_risk_report(extension: Extension) -> RiskReport:
     permissions_risk = []
     for perm in extension.permissions:
         risk_level = get_risk_level(perm)
-        comment = PERMISSION_RISK_COMMENTS.get(perm, f"No comment defined for '{perm}'")
-        permissions_risk.append(RiskMapping(permission=perm, risk_level=risk_level, comment=comment))
-    
+        comment = PERMISSION_RISK_COMMENTS.get(
+            perm, f"No comment defined for '{perm}'")
+        permissions_risk.append(RiskMapping(
+            permission=perm, risk_level=risk_level, comment=comment))
+
     # # Track all manifest-based risks
     # manifest_risk = [
     #     RiskMapping(permission=field, risk_level=evaluate_manifest_field(field, extension, warning="hello"))
@@ -648,9 +680,9 @@ def get_risk_report(extension: Extension) -> RiskReport:
             risk_level=risk_level,
             comment_lookup=RISK_COMMENTS
         )
-    
+
     # Track dynamic script execution risks
-    # script_sources = extension.extract_js_sources    
+    # script_sources = extension.extract_js_sources
     # dynamic_script_risk = [
     #     RiskMapping(
     #         permission="dynamic_script_execution",
@@ -665,35 +697,37 @@ def get_risk_report(extension: Extension) -> RiskReport:
         risk_level=risk_level,
         comment_lookup=RISK_COMMENTS
     )
-    
+
     # Dependency Analysis Risk
     # scrapped due to static analysis and time
     # # flagging known malicious urls from the manifest - test
     # malicious_urls = []
-    # for url in extension.manifest_urls:  
+    # for url in extension.manifest_urls:
     #     domain = urlparse(url).netloc.split(':')[0]
-    #     if check_domain_urlhaus(domain): 
+    #     if check_domain_urlhaus(domain):
     #         malicious_urls.append(url)
     # if malicious_urls:
     #     risk_score = min(100, risk_score + get_risk_score(RiskLevel.HIGH))
-    
+
     # Risk cap 100
     # Calculate the risk score from permissions, manifest, and dynamic script risks
-    risk_score = min(100, sum(get_risk_score(p.risk_level) for p in permissions_risk))
-    
+    risk_score = min(100, sum(get_risk_score(p.risk_level)
+                     for p in permissions_risk))
+
     # Add manifest risk levels to the score
-    risk_score = min(100, risk_score + sum(get_risk_score(f.risk_level) for f in manifest_risk))
-    
+    risk_score = min(100, risk_score + sum(get_risk_score(f.risk_level)
+                     for f in manifest_risk))
+
     # Add dynamic script execution risk to the score
-    risk_score = min(100, risk_score + sum(get_risk_score(f.risk_level) for f in dynamic_script_risk))
-    
+    risk_score = min(100, risk_score + sum(get_risk_score(f.risk_level)
+                     for f in dynamic_script_risk))
+
     # Post-processing multi-field checks for manifest risks
     # Treat unsafe sandbox CSP + overly permissive externally connectable as critical risk
     if any(f.permission == "content_security_policy" and f.risk_level == RiskLevel.LOW for f in manifest_risk) and \
-        any(f.permission == "externally_connectable" and f.risk_level == RiskLevel.HIGH for f in manifest_risk):
-            risk_score = min(100, risk_score + get_risk_score(RiskLevel.CRITICAL))
-    
-    
+            any(f.permission == "externally_connectable" and f.risk_level == RiskLevel.HIGH for f in manifest_risk):
+        risk_score = min(100, risk_score + get_risk_score(RiskLevel.CRITICAL))
+
     return RiskReport(
         name=extension.name,
         sha256=extension.sha256,
@@ -707,4 +741,4 @@ def get_risk_report(extension: Extension) -> RiskReport:
         dynamic=dynamic_script_risk,
         # mal_urls=malicious_urls
         # raw_manifest=extension.manifest.json()
-    )        
+    )
