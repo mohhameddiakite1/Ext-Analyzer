@@ -532,3 +532,59 @@ main {
 .scrollable-content::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Add or update these styles */
+.summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.summary-text p {
+  margin: 0;
+  padding: 15px;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#hash-code {
+  font-family: monospace;
+  color: #495057;
+  background-color: #e9ecef;
+}
+
+#malicious-scripts,
+#malicious-manifest-fields {
+  border-left: 4px solid #dc3545;
+  background-color: #fff5f5;
+}
+
+#malicious-scripts b,
+#malicious-manifest-fields b {
+  color: #dc3545;
+}
+
+#malicious-scripts br + b {
+  display: inline-block;
+  margin: 5px 0 5px 10px;
+  padding: 4px 8px;
+  background-color: rgba(220, 53, 69, 0.1);
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+#ref-urls-num,
+#perms-num {
+  display: inline-block;
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+#ref-urls-num b,
+#perms-num b {
+  color: #495057;
+}

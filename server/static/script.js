@@ -94,31 +94,86 @@ function generatePdfReport() {
   // Summary Section
   yPosition = addHeader("Summary", yPosition);
 
-  // Basic box for summary
+  // Get all summary content
+  const summaryContent = [
+    {
+      label: "Extension Name",
+      value:
+        document.querySelector("#extension-name-value")?.textContent.trim() ||
+        "N/A",
+    },
+    {
+      label: "Risk Score",
+      value: document.querySelector("#risk-score")?.textContent.trim() || "N/A",
+    },
+    {
+      label: "Hash",
+      value:
+        document
+          .querySelector("#hash-code")
+          ?.textContent.replace("(SHA256):", "")
+          .trim() || "N/A",
+    },
+    {
+      label: "Referenced URLs",
+      value:
+        document
+          .querySelector("#ref-urls-num")
+          ?.textContent.replace("Referenced URLs", "")
+          .trim() || "N/A",
+    },
+    {
+      label: "Permissions",
+      value:
+        document
+          .querySelector("#perms-num")
+          ?.textContent.replace("Permissions", "")
+          .trim() || "N/A",
+    },
+  ];
+
+  // Add basic info compactly
+  let summaryText = summaryContent
+    .map((item) => `${item.label}: ${item.value}`)
+    .join("\n");
+
+  // Add malicious content compactly
+  let maliciousScripts =
+    document
+      .querySelector("#malicious-scripts")
+      ?.textContent.replace(/\s+/g, " ")
+      .replace(
+        "Potentially Malicious Scripts:",
+        "Potentially Malicious Scripts:\n"
+      )
+      .trim() || "N/A";
+
+  let maliciousManifest =
+    document
+      .querySelector("#malicious-manifest-fields")
+      ?.textContent.replace(/\s+/g, " ")
+      .replace(
+        "Potentially Malicious Manifest Fields:",
+        "Potentially Malicious Manifest Fields:\n"
+      )
+      .trim() || "N/A";
+
+  // Combine all summary content
+  summaryText += `\n${maliciousScripts}\n${maliciousManifest}`;
+
+  // Calculate box size and draw
+  const summaryLines = doc.splitTextToSize(
+    summaryText,
+    pageWidth - 2 * margin - 10
+  );
+  const boxHeight = summaryLines.length * lineHeight + 6;
+
   doc.setDrawColor(150, 150, 150);
-  doc.rect(margin, yPosition, pageWidth - 2 * margin, 50);
-  yPosition += 5;
+  doc.rect(margin, yPosition, pageWidth - 2 * margin, boxHeight);
+  yPosition += 3;
 
-  const extName =
-    document.querySelector("#extension-name-value")?.textContent.trim() ||
-    "N/A";
-  const riskScore =
-    document.querySelector("#risk-score")?.textContent.trim() || "N/A";
-  const hashCode =
-    document.querySelector("#hash-code")?.textContent.trim() || "N/A";
-  const jsFilesNum =
-    document.querySelector("#js-files-num")?.textContent.trim() || "N/A";
-  const refUrlsNum =
-    document.querySelector("#ref-urls-num")?.textContent.trim() || "N/A";
-  const permsNum =
-    document.querySelector("#perms-num")?.textContent.trim() || "N/A";
-
-  yPosition = addText(`Extension Name: ${extName}`, yPosition);
-  yPosition = addText(`Risk Score: ${riskScore}`, yPosition);
-  yPosition = addText(`${hashCode}`, yPosition);
-  yPosition = addText(`${jsFilesNum}`, yPosition);
-  yPosition = addText(`${refUrlsNum}`, yPosition);
-  yPosition = addText(`${permsNum}`, yPosition);
+  // Add all content in one go
+  yPosition = addText(summaryText, yPosition);
   yPosition += 15;
 
   // Permissions Section
@@ -127,6 +182,7 @@ function generatePdfReport() {
   const permissionEntries = [];
   let permissionReportEntry = ``;
   let permissionsText = "";
+  yPosition += 10;
   yPosition = checkPage(yPosition, 30);
   yPosition = addHeader("Permission Analysis", yPosition);
   const permissions = document.querySelectorAll(".permission-item");
@@ -159,7 +215,7 @@ function generatePdfReport() {
 
       // Add permission text
       yPosition = addText(entry.trim(), yPosition);
-      yPosition += 10;
+      yPosition += 15;
     }
   });
 
@@ -221,8 +277,8 @@ function generateJsonReport() {
     document.querySelector("#risk-score")?.textContent.trim() || "N/A";
   const hashCode =
     document.querySelector("#hash-code")?.textContent.trim() || "N/A";
-  const jsFilesNum =
-    document.querySelector("#js-files-num")?.textContent.trim() || "N/A";
+  const maliciousScripts =
+    document.querySelector("#malicious-scripts")?.textContent.trim() || "N/A";
   const refUrlsNum =
     document.querySelector("#ref-urls-num")?.textContent.trim() || "N/A";
   const permsNum =
@@ -265,7 +321,7 @@ function generateJsonReport() {
       name: extName,
       risk_score: riskScore,
       hash: hashCode,
-      javascript_files: jsFilesNum,
+      malicious_scripts: maliciousScripts,
       referenced_urls: refUrlsNum,
       permissions_count: permsNum,
     },

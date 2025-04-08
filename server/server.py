@@ -3,6 +3,7 @@ import json
 from crx_analyzer.cli import analyze
 import re
 import server.llm as llm
+from pprint import pprint
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 
@@ -132,6 +133,7 @@ def analyze_url():
         analysis_results["explanations"] = explanations
     else:
         analysis_results["message"] = "No permissions found in the extension."
+    pprint(analysis_results)
     return render_template('index.html', analysis_data=analysis_results)
 
 

@@ -68,12 +68,37 @@
               </div>
               <div class="summary-text">
                 <p id="hash-code"><b> (SHA256): {{ analysis_data['sha256'] }}</b></p>
-                <p id="js-files-num">
+                <p id="malicious-scripts">
                   <b>
-                    Javascript Files: {{ analysis_data['javascript_files']|length
-                    }} js files found
-                  </b>
-                </p>
+                    {% if analysis_data['dynamic_sources'] %}
+                    Potentially Malicious Scripts:
+                        {% for dynamic_src in analysis_data['dynamic_sources'][:10] %}
+                          <br/>
+                          **{{ dynamic_src }}**
+                        {% endfor %}
+                        {% if analysis_data['dynamic_sources']|length > 10 %}
+                        <br/>... and {{ analysis_data['dynamic_sources']|length - 10 }} more
+                        {% endif %}
+                        {% else %}
+                        No potentially malicious scripts found.
+                      {% endif %}
+                    </br>
+                  </p>
+                  <p id="malicious-manifest-fields">
+                    <b>
+                    Potentially Malicious Manifest Fields: {% if analysis_data['manifests'] %}
+                      {% for manifest in analysis_data['manifests'][:10] %}
+                      <br/>
+                      {{ manifest['permission'] }}
+                      {% endfor %}
+                      {% if analysis_data['manifests']|length > 10 %}
+                      <br/>... and {{ analysis_data['manifests']|length - 10 }} more
+                      {% endif %}
+                      {% else %}
+                      No potentially malicious manifest fields found.
+                    {% endif %}
+                    </b>
+                  </p>
                 <p id="ref-urls-num">
                   <b>
                     Referenced URLs: {{ analysis_data['urls']|length }} urls found</b
