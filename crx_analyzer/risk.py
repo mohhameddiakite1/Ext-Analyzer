@@ -599,13 +599,14 @@ def analyze_js_risks(dynamic_sources: list[str]) -> RiskLevel:
         # Check content against each risk level's patterns
         for risk_level, patterns in risk_patterns.items():
             for pattern in patterns:
-                match = re.search(pattern, content) 
+                match = re.search(pattern, content)
                 if match:
                     print(f"File {file_path} triggered pattern: {pattern}")
                     print(f"Matched substring: {match.group()}")
-                    net_risk = max(net_risk, risk_level, key=lambda r: get_risk_score(r))
-                    break # stops after first match for the risk level but can be removed and manipulated to log all
-                
+                    net_risk = max(net_risk, risk_level,
+                                   key=lambda r: get_risk_score(r))
+                    break  # stops after first match for the risk level but can be removed and manipulated to log all
+
     return net_risk
 
 
@@ -643,13 +644,12 @@ def analyze_dependency_risks(extension) -> list[RiskMapping]:
                 dependency_risk.append(RiskMapping(
                     permission=f"outdated_dependency: {dep}",
                     risk_level=RiskLevel.HIGH,
-                    comment=f"Outdated version of {dep}; newer versions are recommended for security reasons."
                 ))
 
     return dependency_risk
 
 
-def generate_risk_mapping(name: str, risk_level: RiskLevel, comment_lookup: dict[str, str]) -> list[RiskMapping]:
+def generate_risk_mapping(name: str, risk_level: RiskLevel) -> list[RiskMapping]:
     """
     Generates a list with a single RiskMapping if risk_level is not NONE.
     Returns an empty list otherwise.
@@ -659,7 +659,6 @@ def generate_risk_mapping(name: str, risk_level: RiskLevel, comment_lookup: dict
     return [RiskMapping(
         permission=name,
         risk_level=risk_level,
-        comment=comment_lookup.get(name, "")
     )]
 
 
@@ -674,10 +673,8 @@ def get_risk_report(extension: Extension) -> RiskReport:
     permissions_risk = []
     for perm in extension.permissions:
         risk_level = get_risk_level(perm)
-        comment = PERMISSION_RISK_COMMENTS.get(
-            perm, f"No comment defined for '{perm}'")
         permissions_risk.append(RiskMapping(
-            permission=perm, risk_level=risk_level, comment=comment))
+            permission=perm, risk_level=risk_level))
 
     # # Track all manifest-based risks
     # manifest_risk = [
@@ -753,7 +750,7 @@ def get_risk_report(extension: Extension) -> RiskReport:
         permissions=permissions_risk,
         manifests=manifest_risk,
         dynamic=dynamic_script_risk,
-        dynamic_sources=dynamic_srcs 
+        dynamic_sources=dynamic_srcs
         # mal_urls=malicious_urls
         # raw_manifest=extension.manifest.json()
     )
