@@ -269,7 +269,6 @@ class RiskLevel(str, Enum):
 class RiskMapping(BaseModel):
     permission: Union[ChromePermission, str]
     risk_level: RiskLevel
-    comment: str
 
 
 class RiskReport(BaseModel):

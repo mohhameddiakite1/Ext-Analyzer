@@ -691,7 +691,6 @@ def get_risk_report(extension: Extension) -> RiskReport:
         manifest_risk += generate_risk_mapping(
             name=field,
             risk_level=risk_level,
-            comment_lookup=RISK_COMMENTS
         )
 
     # Track dynamic script execution risks
@@ -711,7 +710,6 @@ def get_risk_report(extension: Extension) -> RiskReport:
     dynamic_script_risk = generate_risk_mapping(
         name="dynamic_script_execution",
         risk_level=risk_level,
-        comment_lookup=RISK_COMMENTS
     )
 
     # Dependency Analysis Risk
